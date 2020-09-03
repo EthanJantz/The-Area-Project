@@ -60,13 +60,6 @@ globals[ ;
 
 ;;;;;;;; Patch  Operations ;;;;;;;;;;;;;;;;;;;;;;;;
 
-to credit_impact ; is funciton of CREDIT CONSTRAINT --- determines the number of patches whose empty variable is true
-  ; the empty variable density serves as a limit on the number of mortgages that can exist in The Area
-  ask  n-of (int ((credit_constraint * .01) * count patches))  patches [ set empty  True ]
-  if residential_density > (count patches - count patches with [ empty = True])
-        [user-message "Too many Houses"]
-end
-
 to value_loss ; sets the color of the credit impacted patches
   ask patches [if empty = True
                 [set mortgage  0 ; to represent that a patch has no available credit
@@ -75,7 +68,6 @@ to value_loss ; sets the color of the credit impacted patches
 end
 
 to patch_effects ; mj
-  credit_impact
   value_loss
   ask patches [ set pcolor scale-color green mortgage 110000 350000] ;MJ
 end
@@ -94,6 +86,7 @@ to setup_patches ;MJ initializes the patches, giving each patch a mortgage value
 
             set patch_data remove-item (position mortgage patch_data) patch_data
 
+
            ]] ;removes already assigned mortgage ---needs to iterate
 
            [set patch_data (patch_data2)
@@ -109,46 +102,6 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;; xxxxxxxxxxxxxxxxxxxxxxxxxxxx ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;Patch Modification  OPERATIONS  ############################################################################
-to setup_data_import_high ;NOT USED
-  set high_patch_data []
-  ifelse(file-exists? "high_housing_value.txt")
-    [
-      file-open "high_housing_value.txt"  ; txt file easier than csv
-      set csv csv:from-file "high_housing_value.txt" ; imporper funciton usage but it works
-      set high_patch_data  one-of csv ; imporper funciton useage  but it works
-
-    file-close]
-  [user-message " there is no high file"]
-end
-
-to setup_data_import_medium;NOT USED
-  ;some statical infomration needs to be imported from files
-  ; array of intial home prices,familysizes, housingtypes,elderconcnetration,
-  set med_patch_data []
-  ifelse(file-exists? "med_housing_value.txt")
-    [
-      file-open "med_housing_value.txt"  ; txt file easier than csv
-      set csv csv:from-file "med_housing_value.txt" ; imporper funciton usage but it works
-      set med_patch_data one-of csv ; imporper funciton useage  but it works
-
-
-    file-close]
-  [user-message " there is no  med file"]
-end
-
-to setup_data_import_low;NOT USED
-
-  set low_patch_data []
-  ifelse(file-exists? "low_housing_value.txt")
-    [
-      file-open "low_housing_value.txt"  ; txt file easier than csv
-      set csv csv:from-file "low_housing_value.txt" ; imporper funciton usage but it works
-      set low_patch_data  one-of csv ; imporper funciton useage  but it works
-
-    file-close]
-  [user-message " there is no  low file"]
-end
-
 
 to set_data_import
    set patch_data []
@@ -207,38 +160,6 @@ to gamma_patch_set_up
   ; could not be working  if the instance of the mortgage call and assignment is not the same as removal
   ;  SD = 31,048,
 end
-
-;;;;;;;;;;;;;;;;; xxxxxxxxxxxxxxxxxxxx --;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;  Set_up _ modified Patches ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-to create_mod_dist
-   loop [ ifelse (any? patches with [mortgage = 0])
-        [ ifelse (empty? dist_list  )
-          [ask one-of patches with [mortgage = 0] [set mortgage one-of dist_list] ; how to remove item from list after selection
-            ask patches [set dist_list remove mortgage dist_list]] ;removes already assigned mortgage ---needs to iterate
-
-           [set dist_list (sentence  shuffle n-of high_value_homes high_patch_data  shuffle n-of med_value_homes med_patch_data  shuffle n-of low_value_homes low_patch_data)
-            ask one-of patches with [mortgage = 0] [set mortgage one-of dist_list ; how to remove item from list after selection
-            set dist_list remove-item (position mortgage dist_list) dist_list]]
-
-       ]
-       [stop]
-       ]
-end
-
-
-to setup_patches_mod ; same as setup_patches, but uses modified distribution of mortgage data instead of the full distribtution list
-  clear-patches
-  set dist_list (sentence  shuffle n-of high_value_homes high_patch_data  shuffle n-of med_value_homes med_patch_data  shuffle n-of low_value_homes low_patch_data) ;shuffle n-of empty_homes empty_patch_data)
-  ; here  would be the section that  woudl be repalced with a unified gamma data set simialr to regular distirbution
-  ; needs a  shuffle select, delete item at unquie instance index in list( this will pick the first instance of the value in the list)
-  ; this is currently not in
-  create_mod_dist
-
-end
-;;;;;;;;;;;;;;;;;;;;;  xxxxxxxxxxxxxxxxxxxxx ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 ;;;;;;;;;;;;;;;; NETWORK Structure  OPERATIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to  prefer_network
@@ -590,16 +511,12 @@ to write_meta_file
     "resident_strategy"resident_strategy
     "social_affinity"social_affinity
     "social_type" social_type ; TRUE means the social preference calculations include a stochastic element, FALSE means that every home has the same value for social preference
-    "credit_constraint"credit_constraint
     "residential_density"residential_density
     "negative_impact"negative_impact
     "Impact_effects" impact_effects
     "network_pref" prefered_network
     "residential_density" residential_density
     "distrubution" Distribution_modifier
-    "H_Value" high_value_homes
-    "M_Value" med_value_homes
-    "L_Value" low_value_homes
     "Offer"  offer_adjustment
     "social_type" social_type
     "mean_mtg" mean_mortgage
@@ -676,11 +593,9 @@ to setup
   reset-ticks
   set-default-shape houses "house"
   check_file
-  write_meta_file
-  write_header
+;  write_meta_file ; for now I'm commenting this out
+;  write_header
   ;#Patch Data Import#
-  if distribution_modifier = "Fine"
-      [setup_data_import_high setup_data_import_low  setup_data_import_medium setup_patches_mod patch_effects]
   if distribution_modifier = "Off"
       [set_data_import  setup_patches patch_effects]
   if distribution_modifier = "Gamma"
@@ -757,51 +672,6 @@ NIL
 NIL
 NIL
 1
-
-SLIDER
-702
-277
-951
-310
-low_value_homes
-low_value_homes
-int (.01 * (count patches))
-int( .9 * (count patches))
-837.0
-1
-1
-Mortgage Samples
-HORIZONTAL
-
-SLIDER
-705
-357
-948
-390
-med_value_homes
-med_value_homes
-int(.01 * count patches)
-int(.9 * count patches)
-10.0
-1
-1
-Mortgage Samples
-HORIZONTAL
-
-SLIDER
-703
-437
-950
-470
-high_value_homes
-high_value_homes
-int(.01 * count patches)
-int(.9 * count patches)
-849.0
-1
-1
-Mortgage Samples
-HORIZONTAL
 
 MONITOR
 869
@@ -913,21 +783,6 @@ resident_strategy
 resident_strategy
 "Linear" "Nested"
 1
-
-SLIDER
-19
-307
-191
-340
-credit_constraint
-credit_constraint
-0
-99
-0.0
-1
-1
-%
-HORIZONTAL
 
 SLIDER
 11
@@ -1176,8 +1031,8 @@ CHOOSER
 62
 Distribution_modifier
 Distribution_modifier
-"Fine" "Gamma" "Off"
-2
+"Gamma" "Off"
+0
 
 SLIDER
 718
@@ -1235,16 +1090,6 @@ TEXTBOX
 1116
 232
 these buckes are based on standard deviation from mean: \nLow Value = 2 below \nMiddle value = within 1 standard deviateion\nHigh value = 2 above\neach had equally  6,000 entries generated  \n#bad statistics 
-11
-0.0
-1
-
-TEXTBOX
-12
-345
-227
-374
-Removing Credit Constraint --- explain in the notes 
 11
 0.0
 1
@@ -1633,7 +1478,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.0
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@

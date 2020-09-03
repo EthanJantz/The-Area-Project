@@ -1,6 +1,6 @@
 extensions[csv]
 breed [houses house]
-breed [nor_agents nor_agent]
+;breed [nor_agents nor_agent] ; probably unnecessary - ej
 
 patches-own[
 
@@ -55,17 +55,9 @@ globals[ ;
   bid_refused_total ; holds the number of refused bids
   hold_out_ratio ;
   gamma_list
-  ;instance_count ; ported over a way to count the number of patches given credit constraint
 ]
 
 ;;;;;;;; Patch  Operations ;;;;;;;;;;;;;;;;;;;;;;;;
-
-to credit_impact ; is funciton of CREDIT CONSTRAINT --- determines the number of patches whose empty variable is true
-  ; the empty variable density serves as a limit on the number of mortgages that can exist in The Area
-  ask  n-of (int ((credit_constraint * .01) * count patches))  patches [ set empty  True ]
-  if residential_density > (count patches - count patches with [ empty = True])
-        [user-message "Too many Houses"]
-end
 
 to value_loss ; sets the color of the credit impacted patches
   ask patches [if empty = True
@@ -75,7 +67,6 @@ to value_loss ; sets the color of the credit impacted patches
 end
 
 to patch_effects ; mj
-  credit_impact
   value_loss
   ask patches [ set pcolor scale-color green mortgage 110000 350000] ;MJ
 end
@@ -110,46 +101,6 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;; xxxxxxxxxxxxxxxxxxxxxxxxxxxx ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;Patch Modification  OPERATIONS  ############################################################################
-to setup_data_import_high
-  set high_patch_data []
-  ifelse(file-exists? "high_housing_value.txt")
-    [
-      file-open "high_housing_value.txt"  ; txt file easier than csv
-      set csv csv:from-file "high_housing_value.txt" ; imporper funciton usage but it works
-      set high_patch_data  one-of csv ; imporper funciton useage  but it works
-
-    file-close]
-  [user-message " there is no high file"]
-end
-
-to setup_data_import_medium
-  ;some statical infomration needs to be imported from files
-  ; array of intial home prices,familysizes, housingtypes,elderconcnetration,
-  set med_patch_data []
-  ifelse(file-exists? "med_housing_value.txt")
-    [
-      file-open "med_housing_value.txt"  ; txt file easier than csv
-      set csv csv:from-file "med_housing_value.txt" ; imporper funciton usage but it works
-      set med_patch_data one-of csv ; imporper funciton useage  but it works
-
-
-    file-close]
-  [user-message " there is no  med file"]
-end
-
-to setup_data_import_low
-
-  set low_patch_data []
-  ifelse(file-exists? "low_housing_value.txt")
-    [
-      file-open "low_housing_value.txt"  ; txt file easier than csv
-      set csv csv:from-file "low_housing_value.txt" ; imporper funciton usage but it works
-      set low_patch_data  one-of csv ; imporper funciton useage  but it works
-
-    file-close]
-  [user-message " there is no  low file"]
-end
-
 
 to set_data_import
    set patch_data []
@@ -208,38 +159,6 @@ to gamma_patch_set_up
   ; could not be working  if the instance of the mortgage call and assignment is not the same as removal
   ;  SD = 31,048,
 end
-
-;;;;;;;;;;;;;;;;; xxxxxxxxxxxxxxxxxxxx --;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;  Set_up _ modified Patches ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-to create_mod_dist
-   loop [ ifelse (any? patches with [mortgage = 0])
-        [ ifelse (empty? dist_list  )
-          [ask one-of patches with [mortgage = 0] [set mortgage one-of dist_list] ; how to remove item from list after selection
-            ask patches [set dist_list remove mortgage dist_list]] ;removes already assigned mortgage ---needs to iterate
-
-           [set dist_list (sentence  shuffle n-of high_value_homes high_patch_data  shuffle n-of med_value_homes med_patch_data  shuffle n-of low_value_homes low_patch_data)
-            ask one-of patches with [mortgage = 0] [set mortgage one-of dist_list ; how to remove item from list after selection
-            set dist_list remove-item (position mortgage dist_list) dist_list]]
-
-       ]
-       [stop]
-       ]
-end
-
-
-to setup_patches_mod ; same as setup_patches, but uses modified distribution of mortgage data instead of the full distribtution list
-  clear-patches
-  set dist_list (sentence  shuffle n-of high_value_homes high_patch_data  shuffle n-of med_value_homes med_patch_data  shuffle n-of low_value_homes low_patch_data) ;shuffle n-of empty_homes empty_patch_data)
-  ; here  would be the section that  woudl be repalced with a unified gamma data set simialr to regular distirbution
-  ; needs a  shuffle select, delete item at unquie instance index in list( this will pick the first instance of the value in the list)
-  ; this is currently not in
-  create_mod_dist
-
-end
-;;;;;;;;;;;;;;;;;;;;;  xxxxxxxxxxxxxxxxxxxxx ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 ;;;;;;;;;;;;;;;; NETWORK Structure  OPERATIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to  prefer_network
@@ -286,8 +205,9 @@ end
 
 to social_preference_value ;;;; ### add switch for homogenous vs heterogenous social preference;;;
   ; assign vlaue to socal preference variable the will determien network quality for agents, soical preference value is determined my social-inteisity how postive or negative this relaitoships is
-  ifelse random_social = TRUE
+  if social_type = "Hetero"
   [  ask  houses[set social_preference  precision (random-float social_affinity * .01)2]  ]
+  if social_type = "Homo"
   [  ask  houses[set social_preference  precision (social_affinity * .01)2]  ]
   ; remove social density as a controller as it only allow to shirnk or expand number of houses with a valaution of any sort
    ; social intensity is a measure of socialiability--postive threshold-- the higher the number the gernally more content everyone is
@@ -488,33 +408,33 @@ end
 
 
 
-to norfolk_bid_search
+to norfolk_bid_search ; CUT OUT, ONLY USING THE BLOCK STRATEGY FOR ANALYSIS
   ;ifelse unique_valuation != "no bid" and norfolk_owned != True ; skips house with a no bid deignation for nested-- it's redudant
+; remove later - ej 9/3
+; if norfolk_strategy = "Point" ; broken after up-date--- use BLOCK on Block_size "1" for same effect
+;          [ask one-of houses with [flagged = 0] [norfolk_valuation norfolk_bid ]
+;            ask houses with [[who] of self] [set flagged 1]
+;           ]
+;
+;
+; if norfolk_strategy = "Fire" ; fire strategy is to change to fire impact
+;                [if not any? nor_agents
+;                  [ask one-of patches [sprout-nor_agents 1 [hide-turtle]  print "nor agent made" ]]
+;                     ; ask nor_agents  ; sprout invisible norfolk turlte, norfolk bid run set parch onweship to norfolk, and sets patch color
+;                 ask nor_agents [ask neighbors4 [if (any? houses = true  or empty = true)[ if (not any? nor_agents-here) [sprout-nor_agents 1  [hide-turtle]]
+;                                                    ] ; if norfolks owned
+;                                                     ask houses-here with [flagged = 0] [norfolk_valuation norfolk_bid ]
+;                                                     ask houses-here  [set flagged 1]]
+;                                                      ]]
 
- if norfolk_strategy = "Point" ; broken after up-date--- use BLOCK on Block_size "1" for same effect
-          [ask one-of houses with [flagged = 0] [norfolk_valuation norfolk_bid ]
-            ask houses with [[who] of self] [set flagged 1]
-           ]
-
-
- if norfolk_strategy = "Fire" ; fire strategy is to change to fire impact
-                [if not any? nor_agents
-                  [ask one-of patches [sprout-nor_agents 1 [hide-turtle]  print "nor agent made" ]]
-                     ; ask nor_agents  ; sprout invisible norfolk turlte, norfolk bid run set parch onweship to norfolk, and sets patch color
-                 ask nor_agents [ask neighbors4 [if (any? houses = true  or empty = true)[ if (not any? nor_agents-here) [sprout-nor_agents 1  [hide-turtle]]
-                                                    ] ; if norfolks owned
-                                                     ask houses-here with [flagged = 0] [norfolk_valuation norfolk_bid ]
-                                                     ask houses-here  [set flagged 1]]
-                                                      ]]
-
-  if norfolk_strategy = "Block"
-                [if (any? houses = true) [
+;  if norfolk_strategy = "Block" ; testing
+                if (any? houses = true) [
                                   repeat blockSize [ if any? houses with [flagged = 0] [ask one-of houses with [ flagged = 0 ] ; create block list of 'flagged' houses
                                  [ set flagged 1 ]; house selection will be random, I don't think that proximity is going to be a determinign factor for block lists
                                    ]] ] ; this create an accountingg of instacnes of events---outside of the ticks
                                  set blockList houses with [flagged = 1]
             ask blockList [norfolk_valuation norfolk_bid] ; this is asking things concurrently
-                ]
+
 
 
 end
@@ -585,25 +505,22 @@ to write_meta_file
   ;file-print ("t icks mortgage-buyout-ratio non-normalized-norfolk-offer success-flag success-total")
   file-write csv:to-row
   (list
-    "norfolk_strategy" norfolk_strategy
     "blocksize"int (blocksize)
     "resident_strategy"resident_strategy
     "social_affinity"social_affinity
-    "random_social" random_social ; TRUE means the social preference calculations include a stochastic element, FALSE means that every home has the same value for social preference
-    "credit_constraint"credit_constraint
+    "social_type" social_type ; TRUE means the social preference calculations include a stochastic element, FALSE means that every home has the same value for social preference
     "residential_density"residential_density
     "negative_impact"negative_impact
     "Impact_effects" impact_effects
     "network_pref" prefered_network
     "residential_density" residential_density
     "distrubution" Distribution_modifier
-    "H_Value" high_value_homes
-    "M_Value" med_value_homes
-    "L_Value" low_value_homes
-    "Offer"  offer_adjustment)
+    "Offer"  offer_adjustment
+    "social_type" social_type
+    "mean_mtg" mean_mortgage
+    "std_dev" mort_stnd_dev
+    )
   ; updated 10/28 to add more values to the meta file for tracking and differtiation
-
-
 
   file-close
 end
@@ -613,7 +530,7 @@ to  write_header
   file-open(word active_file)
    file-write csv:to-row
    (list
-     "ticks" "mortgage-buyout-ratio" "soc_quality" "monetary_valuation" "non-normalized-norfolk-offer" "success-flag""success-total" "houses" "Houses_network_4_plus" "Houses_network_3" "Houses_network_2" "Total_Links" "hold_out_ratio" "initial_val" "mean_mtg" "std_dev"
+     "ticks" "mortgage-buyout-ratio" "soc_quality" "monetary_valuation" "non-normalized-norfolk-offer" "success-flag""success-total" "houses" "Houses_network_4_plus" "Houses_network_3" "Houses_network_2" "Total_Links" "hold_out_ratio" "initial_val"
      ) ; removed link_iso and neigh_iso, between initial valuation and mean mortgage
 end
 
@@ -673,12 +590,10 @@ to setup
  clear-all
   reset-ticks
   set-default-shape houses "house"
-  check_file
-  write_meta_file
-  write_header
+;  check_file ; for now I"m commenting this out - ej
+;  write_meta_file ; for now I'm commenting this out -ej
+;  write_header ; for now I"m commenting this out - ej
   ;#Patch Data Import#
-  if distribution_modifier = "Fine"
-      [setup_data_import_high setup_data_import_low  setup_data_import_medium setup_patches_mod patch_effects]
   if distribution_modifier = "Off"
       [set_data_import  setup_patches patch_effects]
   if distribution_modifier = "Gamma"
@@ -756,56 +671,11 @@ NIL
 NIL
 1
 
-SLIDER
-702
-277
-951
-310
-low_value_homes
-low_value_homes
-int (.01 * (count patches))
-int( .9 * (count patches))
-837.0
-1
-1
-Mortgage Samples
-HORIZONTAL
-
-SLIDER
-705
-357
-948
-390
-med_value_homes
-med_value_homes
-int(.01 * count patches)
-int(.9 * count patches)
-10.0
-1
-1
-Mortgage Samples
-HORIZONTAL
-
-SLIDER
-703
-437
-950
-470
-high_value_homes
-high_value_homes
-int(.01 * count patches)
-int(.9 * count patches)
-849.0
-1
-1
-Mortgage Samples
-HORIZONTAL
-
 MONITOR
-869
-393
-947
-438
+697
+401
+775
+446
 High Value Mortgage Sample Space
 high_value
 17
@@ -813,10 +683,10 @@ high_value
 11
 
 MONITOR
-869
-314
-946
-359
+697
+322
+774
+367
 Mid Value Mortgage Sample Space
 med_value
 17
@@ -824,10 +694,10 @@ med_value
 11
 
 MONITOR
-873
-232
-948
-277
+701
+240
+776
+285
 Low Value Mortgage Sample Space
 low_value
 17
@@ -853,9 +723,9 @@ NIL
 
 SLIDER
 11
-70
+51
 189
-103
+84
 residential_density
 residential_density
 50
@@ -868,35 +738,25 @@ HORIZONTAL
 
 SWITCH
 20
-270
+251
 186
-303
+284
 prefered_network
 prefered_network
 0
 1
 -1000
 
-CHOOSER
-40
-375
-178
-420
-norfolk_strategy
-norfolk_strategy
-"Block" "Fire" "Point"
-0
-
 SLIDER
-9
-431
-181
-464
+15
+299
+187
+332
 blocksize
 blocksize
 1
 1080
-25.0
+105.0
 1
 1
 NIL
@@ -904,34 +764,19 @@ HORIZONTAL
 
 CHOOSER
 45
-115
+96
 183
-160
+141
 resident_strategy
 resident_strategy
 "Linear" "Nested"
 1
 
 SLIDER
-19
-307
-191
-340
-credit_constraint
-credit_constraint
-0
-99
-0.0
-1
-1
-%
-HORIZONTAL
-
-SLIDER
-11
-472
-183
-505
+17
+342
+189
+375
 offer_adjustment
 offer_adjustment
 1
@@ -943,10 +788,10 @@ offer_adjustment
 HORIZONTAL
 
 PLOT
-215
-469
-566
-619
+17
+470
+368
+620
 Network Distribution
 # of Links
 Households
@@ -961,10 +806,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [count link-neighbors] of houses"
 
 MONITOR
-1220
-405
-1304
-450
+793
+396
+877
+441
 Network  4+
 count turtles with [color = blue]
 17
@@ -972,10 +817,10 @@ count turtles with [color = blue]
 11
 
 MONITOR
-1058
-408
-1130
-453
+793
+293
+865
+338
 Network 1
 count turtles with [color = red]
 17
@@ -983,10 +828,10 @@ count turtles with [color = red]
 11
 
 MONITOR
-1137
-406
-1215
-451
+793
+342
+871
+387
 Network 2+
 count turtles with [color = yellow]
 17
@@ -994,10 +839,10 @@ count turtles with [color = yellow]
 11
 
 MONITOR
-977
-410
-1049
-455
+792
+239
+864
+284
 Network 0
 count turtles with [color = grey]
 17
@@ -1005,10 +850,10 @@ count turtles with [color = grey]
 11
 
 PLOT
-29
-630
-413
-780
+17
+634
+401
+784
 Mortgage Distribution
 Mortgage Amount
 # of Mortgage
@@ -1023,10 +868,10 @@ PENS
 "default" 10.0 1 -16777216 true "" "histogram [mortgage] of patches"
 
 SLIDER
-11
-564
-192
-597
+17
+427
+198
+460
 negative_impact
 negative_impact
 0
@@ -1038,53 +883,36 @@ negative_impact
 HORIZONTAL
 
 SWITCH
-35
-518
-182
-551
+20
+387
+167
+420
 impact_effects
 impact_effects
 0
 1
 -1000
 
-BUTTON
-924
-18
-987
-51
-NIL
-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
 SLIDER
 16
-170
+151
 188
-203
+184
 social_affinity
 social_affinity
 10
 100
-100.0
+90.0
 10
 1
 %
 HORIZONTAL
 
 PLOT
-437
-630
-833
-780
+411
+635
+807
+785
 Purchase Price to Mortgage* Ratio
 Bids
 Ratio
@@ -1099,10 +927,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot mortgage-buyout-ratio"
 
 MONITOR
-862
-639
-1002
-684
+819
+676
+959
+721
 NIL
 mortgage-buyout-ratio
 17
@@ -1110,10 +938,10 @@ mortgage-buyout-ratio
 11
 
 MONITOR
-863
-703
-1044
-748
+820
+740
+1001
+785
 NIL
 max [bid_failures] of patches
 17
@@ -1121,10 +949,10 @@ max [bid_failures] of patches
 11
 
 PLOT
-608
-473
-996
-623
+386
+467
+774
+617
 Norfolk Offer
 NIL
 NIL
@@ -1139,10 +967,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot non-normalized-norfolk-offer"
 
 MONITOR
-1009
-575
-1181
-620
+797
+571
+969
+616
 NIL
 non-normalized-norfolk-offer
 17
@@ -1150,10 +978,10 @@ non-normalized-norfolk-offer
 11
 
 PLOT
-978
-244
-1306
-394
+881
+241
+1209
+391
 Hold Out Ratio
 Ticks
 Holdout Ratio
@@ -1174,7 +1002,7 @@ CHOOSER
 62
 Distribution_modifier
 Distribution_modifier
-"Fine" "Gamma" "Off"
+"Gamma" "Off"
 1
 
 SLIDER
@@ -1186,7 +1014,7 @@ mean_mortgage
 mean_mortgage
 100000
 300000
-100000.0
+200000.0
 25000
 1
 NIL
@@ -1201,7 +1029,7 @@ mort_stnd_dev
 mort_stnd_dev
 10000
 90000
-89500.0
+43000.0
 1500
 1
 NIL
@@ -1237,21 +1065,11 @@ these buckes are based on standard deviation from mean: \nLow Value = 2 below \n
 0.0
 1
 
-TEXTBOX
-12
-345
-227
-374
-Removing Credit Constraint --- explain in the notes 
-11
-0.0
-1
-
 MONITOR
-1008
-465
-1178
-510
+796
+461
+966
+506
 Network Isolated Houses 
 count houses with[ count link-neighbors = 0]
 17
@@ -1259,10 +1077,10 @@ count houses with[ count link-neighbors = 0]
 11
 
 MONITOR
-1008
-519
-1181
-564
+796
+515
+969
+560
 Neighbor Isolated Houses
 count houses with [count (neighbors with[norfolk_owned = true or empty = true]) > 0]
 17
@@ -1279,16 +1097,15 @@ TEXTBOX
 0.0
 1
 
-SWITCH
+CHOOSER
 48
-215
-182
-248
-random_social
-random_social
+191
+186
+236
+Social_type
+Social_type
+"Hetero" "Homo"
 0
-1
--1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1632,7 +1449,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.0
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -1728,8 +1545,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -1783,8 +1600,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Linear&quot;"/>
@@ -1838,8 +1655,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -1893,8 +1710,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -1948,8 +1765,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2003,8 +1820,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2058,8 +1875,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2113,8 +1930,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2168,8 +1985,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2223,8 +2040,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2278,8 +2095,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2333,8 +2150,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2388,8 +2205,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2443,8 +2260,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2498,8 +2315,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2553,8 +2370,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2608,8 +2425,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2663,8 +2480,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2718,8 +2535,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2737,7 +2554,7 @@ NetLogo 6.1.0
       <value value="25"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="Apr18_DistLow" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+  <experiment name="Apr18_DistLeft_skew" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <enumeratedValueSet variable="negative_impact">
@@ -2773,8 +2590,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2792,7 +2609,7 @@ NetLogo 6.1.0
       <value value="25"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="Apr18_DistHigh" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+  <experiment name="Apr18_DistRight_skew" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <enumeratedValueSet variable="negative_impact">
@@ -2828,8 +2645,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2883,8 +2700,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2938,8 +2755,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -2993,8 +2810,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="50"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -3048,8 +2865,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="10"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -3067,7 +2884,7 @@ NetLogo 6.1.0
       <value value="25"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="Apr18_Soc0" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+  <experiment name="May18_Soc2" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <enumeratedValueSet variable="negative_impact">
@@ -3101,10 +2918,10 @@ NetLogo 6.1.0
       <value value="837"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="social_affinity">
-      <value value="0"/>
+      <value value="2"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -3158,8 +2975,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="false"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Homo&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -3213,8 +3030,8 @@ NetLogo 6.1.0
     <enumeratedValueSet variable="social_affinity">
       <value value="90"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="random_social">
-      <value value="true"/>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="resident_strategy">
       <value value="&quot;Nested&quot;"/>
@@ -3230,6 +3047,281 @@ NetLogo 6.1.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="blocksize">
       <value value="25"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="May18_Soc5" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="negative_impact">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="impact_effects">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="high_value_homes">
+      <value value="849"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="offer_adjustment">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="credit_constraint">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prefered_network">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Distribution_modifier">
+      <value value="&quot;Off&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="residential_density">
+      <value value="540"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="med_value_homes">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="low_value_homes">
+      <value value="837"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_affinity">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="resident_strategy">
+      <value value="&quot;Nested&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean_mortgage">
+      <value value="300000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="norfolk_strategy">
+      <value value="&quot;Block&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mort_stnd_dev">
+      <value value="71500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blocksize">
+      <value value="25"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="May18_Soc7" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="negative_impact">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="impact_effects">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="high_value_homes">
+      <value value="849"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="offer_adjustment">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="credit_constraint">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prefered_network">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Distribution_modifier">
+      <value value="&quot;Off&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="residential_density">
+      <value value="540"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="med_value_homes">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="low_value_homes">
+      <value value="837"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_affinity">
+      <value value="7"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="resident_strategy">
+      <value value="&quot;Nested&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean_mortgage">
+      <value value="300000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="norfolk_strategy">
+      <value value="&quot;Block&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mort_stnd_dev">
+      <value value="71500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blocksize">
+      <value value="25"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="May18_Block50" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="negative_impact">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="impact_effects">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="high_value_homes">
+      <value value="849"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="offer_adjustment">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="credit_constraint">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prefered_network">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Distribution_modifier">
+      <value value="&quot;Off&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="residential_density">
+      <value value="540"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="med_value_homes">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="low_value_homes">
+      <value value="837"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_affinity">
+      <value value="90"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="resident_strategy">
+      <value value="&quot;Nested&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean_mortgage">
+      <value value="300000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="norfolk_strategy">
+      <value value="&quot;Block&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mort_stnd_dev">
+      <value value="71500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blocksize">
+      <value value="50"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="May18_Block80" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="negative_impact">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="impact_effects">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="high_value_homes">
+      <value value="849"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="offer_adjustment">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="credit_constraint">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prefered_network">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Distribution_modifier">
+      <value value="&quot;Off&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="residential_density">
+      <value value="540"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="med_value_homes">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="low_value_homes">
+      <value value="837"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_affinity">
+      <value value="90"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="resident_strategy">
+      <value value="&quot;Nested&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean_mortgage">
+      <value value="300000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="norfolk_strategy">
+      <value value="&quot;Block&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mort_stnd_dev">
+      <value value="71500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blocksize">
+      <value value="80"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="May18_Block105" repetitions="15" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <enumeratedValueSet variable="negative_impact">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="impact_effects">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="high_value_homes">
+      <value value="849"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="offer_adjustment">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="credit_constraint">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prefered_network">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Distribution_modifier">
+      <value value="&quot;Off&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="residential_density">
+      <value value="540"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="med_value_homes">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="low_value_homes">
+      <value value="837"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_affinity">
+      <value value="90"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social_type">
+      <value value="&quot;Hetero&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="resident_strategy">
+      <value value="&quot;Nested&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean_mortgage">
+      <value value="300000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="norfolk_strategy">
+      <value value="&quot;Block&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mort_stnd_dev">
+      <value value="71500"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="blocksize">
+      <value value="105"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
