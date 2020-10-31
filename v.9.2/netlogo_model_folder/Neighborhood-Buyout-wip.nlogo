@@ -275,18 +275,18 @@ to linear_res_valuation ; new resident valuation aka WILLINGNESS TO PAY  is used
     ]
     ;Componest are normalized below --this assumes a linear normative relaitonships amoong dynamics
     ; step 1a-a
-   ask houses[
-      set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
+  ask houses[
+     set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
      ; step 1b-a
-    if max [soc_valuation] of houses > 0
-      [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
-              ]
+     if max [soc_valuation] of houses > 0
+        [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
+     ]
 
-    ask houses [
+  ask houses [
     ;step 1c  create valuation from  social value and montary valuae funcitonign independantly
-         set valuation  ((1 - social_preference) * monetary_quality) + (social_preference * soc_quality)  ;create updated network quality impacts, mortgage and interest interaction per iteration
+     set valuation  ((1 - social_preference) * monetary_quality) + (social_preference * soc_quality)  ;create updated network quality impacts, mortgage and interest interaction per iteration
     ; operates on the assumption that there is an expectation of YOY change in  valuation given adequate "soical cohesion Interest rate"
-               ]
+     ]
 
 ;Step 2 valuation  -- valuation here from above  plus added network and stats space. all normalized
  ask houses [
@@ -320,30 +320,30 @@ to nested_resident_valuation ;
 
    ask houses [
                if network_quality = 0 [stop]
-                    set_monetary_valuation ; interest intergrated and works on the assumption houses will havea YOY increase or decrese in monetary vaulautuion
-                     set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
+               set_monetary_valuation ; interest intergrated and works on the assumption houses will havea YOY increase or decrese in monetary vaulautuion
+               set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
+               set_social_valuation ;socialprefrence intergrated into "set_social_valuation" function
+               if max [soc_valuation] of houses > 0
+                  [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
 
-                     set_social_valuation ;socialprefrence intergrated into "set_social_valuation" function
-                     if max [soc_valuation] of houses > 0
-                         [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
 
-
-                     set valuation  (((1 - social_preference) * monetary_quality) + (social_preference * soc_quality))  ;create updated network quality impacts, mortgage and interest interaction per iteration
+               set valuation  (((1 - social_preference) * monetary_quality) + (social_preference * soc_quality))  ;create updated network quality impacts, mortgage and interest interaction per iteration
                                      ;monetary preference = 1 - social preference
 
                ifelse social_preference > 0 ; network threshold - intial network qulaity = network threshold
                    ; have network quality multipled by social preference in  inequality with network threshold ---- if bleow threshodl engae in linear bid.  (<=)
-                     [ifelse ((network_threshold - network_quality ) <= 0) ; really assess network pressure, once pressure out wiegh intial threhold quality has to be bigger than threshold
+                     [
+                        ifelse ((network_threshold - network_quality ) <= 0) ; really assess network pressure, once pressure out wiegh intial threhold quality has to be bigger than threshold
                           [ifelse any? in-link-neighbors
                                [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2)) ] ; change by mutliplying
                                [set unique_valuation ((((valuation + unique_valuation)/ 2)))]]
-                           [set unique_valuation ("no bid")]
+                          [set unique_valuation ("no bid")]
                      ]
 
                     [ ifelse any? in-link-neighbors
                          [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2))] ;network quality is consider through linke neighbor valuation now better off or worse off neighbori nfleince agent decison making
-                          [set unique_valuation valuation];thiscreate a valuation without network impacgts
-                     ]
+                         [set unique_valuation valuation];thiscreate a valuation without network impacgts
+                    ]
 
   ]
   ;print valuation
@@ -902,7 +902,7 @@ social_affinity
 social_affinity
 10
 100
-90.0
+70.0
 10
 1
 %
