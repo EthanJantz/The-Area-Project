@@ -1,4 +1,4 @@
-extensions[csv]
+extensions[py csv]
 breed [houses house]
 ;breed [nor_agents nor_agent] ; probably unnecessary - ej
 
@@ -234,7 +234,7 @@ end
 to turtle_initial_attributes ; update valuation to be  intial-valaution
  ; ask houses[set valuation ((mortgage + mean[mortgage]of patches with [empty != true and norfolk_owned != true ]  in-radius  1) / 2)
   ;print valuation
-  ask houses [set initial_valuation ( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2 *(1 + (interest_rate * .01))] ; update apr 22- MJ
+  ask houses [set initial_valuation ( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2] ; update apr 22- MJ
   ;] ; give tutle unique valuation that is connected to events around it in regard to investments;valautuin ca be average of nieghbors of my turels or in radiaus of tutles;ask house to take average of mortgage from patch in nieghborhood
   ask houses[set tenure(1 + random 70)]
      ; 1tenure is randon due to populaiton data showing that under 70 the disitbrution for ages are flat meanign equal values for each one
