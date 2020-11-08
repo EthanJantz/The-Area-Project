@@ -360,83 +360,68 @@ end
 ;################################################## NOrfolk Operations#########################################################################
 
 to norfolk_bid ; bid function is inside of search function
-   ;ask patch-here[
-       set mortgage-buyout-ratio (non-normalized-norfolk-offer / monetary_valuation);x)] ; #mj
-       buyout-output
-  ;ask houses-here [
+
+  set mortgage-buyout-ratio (non-normalized-norfolk-offer / monetary_valuation);x)] ; #mj
+  buyout-output
+
   ifelse  unique_valuation = "no bid"
           [ask patch-here [set bid_failures bid_failures + 1 print "Failed bid" print bid_failures]]
   [ifelse norfolk_offer > unique_valuation ; ife else statemen that if residnet vlaaution higher thatn norfolk add to bid failure
     [
       set success-flag 1
       set success-total success-total + 1
-      ;ask houses-here [let x monetary_valuation
+
       ask patch-here[
         set mortgage-buyout-ratio (non-normalized-norfolk-offer /(first [monetary_valuation] of houses-here));x)]
-       buyout-output
+        buyout-output
         set norfolk_owned  True
         ask neighbors[if norfolk_owned != true [secondary_impacts]] ;valuation change as oppose mortgage--- stretch work is to add specualtive aspect to  work.  ask agent to behave in specualtive fashion.
                                                                     ; update montery-valuaiton of nieghborhood patches in seconday impacts
         set pcolor blue
         if impact_effects = true []
-        ask houses-here [die]]
+        ask houses-here [die]
+      ]
       set bid_failures 0
     ]
     [
       set bid_refused_total bid_refused_total + 1
       set bid_failures bid_failures + 1 print "Failed bid: " print bid_failures
       set success-flag 0
-  ]]
-  ; set bidfailure to zero after  successful purchase ---- test impacts
+    ]
+  ]
+
 
   print "Norfolk bid occured"
   print "Norfolk offer"
   print norfolk_offer
   set-current-plot "Purchase Price to Mortgage* Ratio" ; the Mortgage* here refers to the monetary valuation, as that value is a composite variable that is much more robust adn refelctive on our intent to show purchasing value to  house valuation
   plot mortgage-buyout-ratio
-
-  ;]
 end
 
 
 to norfolk_valuation ; offer_adjustment * bid failure can be changed to be a percentage interaction of specfic houses offer
-set norfolk_offer (((mortgage * (.01 * offer_adjustment ) * bid_failures) + mean[mortgage] of patches with [norfolk_owned != True and empty != True] )/ max [mortgage] of patches) ; cleaned up aspects and normali
+  set norfolk_offer (((mortgage * (.01 * offer_adjustment ) * bid_failures) + mean[mortgage] of patches with [norfolk_owned != True and empty != True] )/ max [mortgage] of patches) ; cleaned up aspects and normali
   set non-normalized-norfolk-offer (offer_adjustment * bid_failures) + mean[mortgage] of patches with [norfolk_owned != True and empty != True]
   print "norfolk offer"
   print norfolk_offer
 end
 
 
+to norfolk_bid_search
+  if (any? houses = true) [
+    repeat blockSize [
+      if any? houses with [flagged = 0] [ask one-of houses with [ flagged = 0 ] ; create block list of 'flagged' houses
+      [ set flagged 1 ]; house selection will be random, I don't think that proximity is going to be a determinign factor for block list
+      ]
+    ]
+  ] ; this create an accountingg of instacnes of events---outside of the ticks
 
-to norfolk_bid_search ; CUT OUT, ONLY USING THE BLOCK STRATEGY FOR ANALYSIS
-  ;ifelse unique_valuation != "no bid" and norfolk_owned != True ; skips house with a no bid deignation for nested-- it's redudant
-; remove later - ej 9/3
-; if norfolk_strategy = "Point" ; broken after up-date--- use BLOCK on Block_size "1" for same effect
-;          [ask one-of houses with [flagged = 0] [norfolk_valuation norfolk_bid ]
-;            ask houses with [[who] of self] [set flagged 1]
-;           ]
-;
-;
-; if norfolk_strategy = "Fire" ; fire strategy is to change to fire impact
-;                [if not any? nor_agents
-;                  [ask one-of patches [sprout-nor_agents 1 [hide-turtle]  print "nor agent made" ]]
-;                     ; ask nor_agents  ; sprout invisible norfolk turlte, norfolk bid run set parch onweship to norfolk, and sets patch color
-;                 ask nor_agents [ask neighbors4 [if (any? houses = true  or empty = true)[ if (not any? nor_agents-here) [sprout-nor_agents 1  [hide-turtle]]
-;                                                    ] ; if norfolks owned
-;                                                     ask houses-here with [flagged = 0] [norfolk_valuation norfolk_bid ]
-;                                                     ask houses-here  [set flagged 1]]
-;                                                      ]]
+  set blockList houses with [flagged = 1]
 
-;  if norfolk_strategy = "Block" ; testing
-                if (any? houses = true) [
-                                  repeat blockSize [ if any? houses with [flagged = 0] [ask one-of houses with [ flagged = 0 ] ; create block list of 'flagged' houses
-                                 [ set flagged 1 ]; house selection will be random, I don't think that proximity is going to be a determinign factor for block lists
-                                   ]] ] ; this create an accountingg of instacnes of events---outside of the ticks
-                                 set blockList houses with [flagged = 1]
-            ask blockList [norfolk_valuation norfolk_bid] ; this is asking things concurrently
-
-
-
+  ask blockList [
+    norfolk_valuation
+    norfolk_bid
+  ] ; this is asking things concurrently
 end
 
 ; MISC items added that haven't been placed in operation grouping
