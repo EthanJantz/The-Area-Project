@@ -375,10 +375,10 @@ to norfolk_bid ; bid function is inside of search function
         set mortgage-buyout-ratio (non-normalized-norfolk-offer /(first [monetary_valuation] of houses-here));x)]
         buyout-output
         set norfolk_owned  True
-        ask neighbors[if norfolk_owned != true [secondary_impacts]] ;valuation change as oppose mortgage--- stretch work is to add specualtive aspect to  work.  ask agent to behave in specualtive fashion.
+        ask neighbors[if norfolk_owned != true and impact_effects = true [secondary_impacts]] ;valuation change as oppose mortgage--- stretch work is to add specualtive aspect to  work.  ask agent to behave in specualtive fashion.
                                                                     ; update montery-valuaiton of nieghborhood patches in seconday impacts
         set pcolor blue
-        if impact_effects = true []
+        ;if impact_effects = true []
         ask houses-here [die]
       ]
       set bid_failures 0
@@ -604,11 +604,10 @@ to go
  ; social_network_assessment ; network assesmemnt + visualizaiton update
   strategy_select  ; resident willingness to pay calculation strategies
   norfolk_bid_search ; norfolk search  strategies and bidding
-   ask houses [ set flagged 0
-    ; print unique_valuation
-  ] ;  block code strategy
+   ask houses [
+    set flagged 0
+  ]
    colorize_houses
-
   tick
 end
 @#$#@#$#@
