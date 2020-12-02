@@ -40,7 +40,7 @@ globals[ ;
   low_value ; weight to modify sampel distrbution of low patch data variable in dist_list
   dist_list ; A list of sampled mortgages
   norfolk_offer ; the offer cacluated from our utility funciton  that is compoared to the agents represneting houseshold unique vlauation variable
- interest_rate ; could represent  change in  percpetion of area due to development. The value coudl be postive or negative. For this model the interest rates are held at a constant of zero
+  interest_rate ; could represent  change in  percpetion of area due to development. The value coudl be postive or negative. For this model the interest rates are held at a constant of zero
   blocklist; a list of agent repreenitn household that will compare norfolk offer to it's unique valutions.
   mortgage-buyout-ratio ; a variable for plotting the ratio of norfolk's buyout price to the underlying patch mortgage value
   non-normalized-norfolk-offer ; a variable storing the non-normalized norfolk offer so that it can be used to find the ratio of the offer to the mortgage
@@ -114,7 +114,7 @@ to set_data_import
     ;print csv
 
     file-close]
-  [user-message " there is no Non-modifide distribution file"]
+  [user-message "There is no distribution file"]
 end
 
 
@@ -171,9 +171,6 @@ to  prefer_network
                   create-houses 1 [
                           move-to one-of patches with [empty != true and any? turtles-here = false]
         create-link-with partner ]
-     ; ask links [
-      ;  set tenure tenure + 1 ;
-      ;]
     ] [stop]
   ]
 
@@ -190,7 +187,8 @@ to colorize_houses ;color by number of network connections
                 if ((count my-out-links) = 0) [set color gray]
                 if ((count my-out-links) > 0)[set color red]
                 if ((count my-out-links) >= 2)[set color yellow]
-                if ((count my-out-links) >= 4) [set color blue]]
+                if ((count my-out-links) >= 4) [set color blue]
+  ]
 end
 
 
@@ -499,7 +497,7 @@ to write_meta_file
     "Impact_effects" impact_effects
     "network_pref" prefered_network
     "residential_density" residential_density
-    "distrubution" Distribution_modifier
+    "distrubution" distribution
     "Offer"  offer_adjustment
     "social_type" social_type
     "mean_mtg" mean_mortgage
@@ -579,9 +577,9 @@ to setup
 ;  write_meta_file ; for now I'm commenting this out -ej
 ;  write_header ; for now I"m commenting this out - ej
   ;#Patch Data Import#
-  if distribution_modifier = "Off"
+  if distribution = "Real"
       [set_data_import  setup_patches patch_effects]
-  if distribution_modifier = "Gamma"
+  if distribution = "Simulated"
       [gamma_dist_generation gamma_patch_set_up patch_effects]
   set high_value count patches with[mortgage >= 252150] ; 252150,267000 actual range for high
   set med_value count patches with [mortgage <= 252149 and mortgage >= 221101] ; 221101,252149 actual range for mid
@@ -984,10 +982,10 @@ CHOOSER
 17
 873
 62
-Distribution_modifier
-Distribution_modifier
-"Gamma" "Off"
-1
+Distribution
+Distribution
+"Simulated" "Real"
+0
 
 SLIDER
 718
@@ -1094,11 +1092,17 @@ Social_type
 @#$#@#$#@
 ## WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+This model simulates the systematic purchasing of real estate in a residential neighborhood by a corporation intending to redevelop the land. The environment of this model does not reflect geographic space. Instead, each patch represents a mortgage/land value. The interactions in this model allow the user to explore the effects of property acquisition on neighborhood residents and the underlying dynamics affecting outcomes such as displacement and gentrification.
 
 ## HOW IT WORKS
 
-(what rules the agents use to create the overall behavior of the model)
+At the beginning of the model a matrix of patches are assigned mortgage values from a distribution. Higher mortgage values have a lighter color patch. Patches spawn houses based on the residential density variable set by the user. Houses create links based on a prefered or random style and adopt unique valuations of their property based on the mortgage and social values. Each tick follows a cycle of resident valuation followed by a bidding process in which Norfolk makes a bid on a house that is either refused or accepted.
+
+During the valuation stage of the cycle houses assess a valuation of their property. The valuation includes their monetary valuation of the property and a social valuation that assess their neighbors property valuations. Depending on which strategy the user selects the valuation can be done using a linear valuation algorithm or a nested one. The linear valuation has each house assess their value based on the social and monetary valuations and includes the valuation of any other houses in their network, if any network links are present. The nested valuation strategy incorporates a decision tree based on network links and social preferences that creates a valuation incorporating the average valuation of linked and nearby houses. 
+
+The bidding stage utilizes the observer to act as the corporation. The observer flags a random set of houses based on the block size variable and sets an offer for each flagged house based on the underlying patch mortgage, the offer adjustment variable, the number of failed bids, the average mortgage value of already purchased property and the average value of all patches. If the offer is not higher than a house's valuation the bid fails. If the offer is higher the house and its underlying patch are purchased. If negative impact is set to on, the mortgage value of adjacent patches not owned by the observer are reduced by the negative impact variable. The house on the purchased patch is removed and network links are severed.
+
+These two stages of the cycle continue until all of the houses have been purchased. 
 
 ## HOW TO USE IT
 
