@@ -506,7 +506,7 @@ to  write_header
    file-write csv:to-row
    (list
      "ticks" "mortgage-buyout-ratio" "soc_quality" "monetary_valuation" "non-normalized-norfolk-offer" "success-flag""success-total" "houses" "Houses_network_4_plus" "Houses_network_3" "Houses_network_2" "Total_Links" "hold_out_ratio" "initial_val"
-     ) ; removed link_iso and neigh_iso, between initial valuation and mean mortgage
+     )
 end
 
 
@@ -704,7 +704,7 @@ residential_density
 residential_density
 50
 1080
-540.0
+500.0
 10
 1
 NIL
@@ -730,7 +730,7 @@ blocksize
 blocksize
 1
 1080
-109.0
+20.0
 1
 1
 NIL
@@ -755,7 +755,7 @@ offer_adjustment
 offer_adjustment
 1
 100
-20.0
+10.0
 1
 1
 %
@@ -824,9 +824,9 @@ count turtles with [color = grey]
 11
 
 PLOT
-716
-308
-976
+718
+296
+978
 448
 Mortgage Distribution
 Mortgage Amount
@@ -850,7 +850,7 @@ negative_impact
 negative_impact
 0
 25
-10.0
+15.0
 1
 1
 %
@@ -876,7 +876,7 @@ social_affinity
 social_affinity
 10
 100
-70.0
+50.0
 10
 1
 %
@@ -930,10 +930,10 @@ non-normalized-norfolk-offer
 11
 
 PLOT
-696
-597
-968
-748
+694
+543
+966
+747
 Hold Out Ratio
 Ticks
 Holdout Ratio
@@ -955,7 +955,7 @@ CHOOSER
 Distribution
 Distribution
 "Simulated" "Real"
-0
+1
 
 SLIDER
 718
@@ -964,9 +964,9 @@ SLIDER
 103
 mean_mortgage
 mean_mortgage
-100000
+50000
 300000
-200000.0
+300000.0
 25000
 1
 NIL
@@ -979,9 +979,9 @@ SLIDER
 143
 mort_stnd_dev
 mort_stnd_dev
-10000
-90000
-43000.0
+5000
+100000
+9500.0
 1500
 1
 NIL
@@ -1034,17 +1034,23 @@ One important output of this model is the individual bidding actions output at t
 
 ## THINGS TO TRY
 
-Try changing the 
+Try changing the prefered_network variable and see how that effects the purchasing process. 
+
+Change the distribution to a higher or lower mean in the simulated distribution and see how neighborhood wealth affects outcomes. Do they lead to more holdouts?
+
+Move the social affinity variable around, change the social type to introduce stochasticity into the social preferences of the neighborhood. What happens when residents weight their decision to sell more toward their social ties?
+
+Introduce negative impacts and modify the intensity of their effects. Does this cause the buyer entity to spend more or less?
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+Including a interest-rate slider for the user to modify. There is already a reference to interest-rate in the model code, but we weren't able to get around to implementing it.
 
-Including a interest-rate slider for the user to toy with
+Include an ability for the agents to create a community benefits agreement, or a point where the residents refuse to sell as an act of collective defiance. 
 
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+Our model utilizes the output and plot drawing functions in ways that we don't think the software was written to include. Our output data is a collection of every sale action within the simulation, providing data that happens between each tick. This was something we had to jerry rig to produce and clean using python scripting. 
 
 ## RELATED MODELS
 
