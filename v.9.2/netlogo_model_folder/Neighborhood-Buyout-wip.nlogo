@@ -1,57 +1,54 @@
-extensions[py csv]
+extensions[csv]
 breed [houses house]
 
 patches-own[
-
-  mortgage  ;  Mortgage for each patch is representative of mortgage credit avaliability for nieghborhood.
+  mortgage ; Mortgage for each patch is representative of mortgage credit avaliability for nieghborhood.
   norfolk_owned
-  empty; boolean variable representing avaibility of mortgages in The Area, if true removes mortage creit--serving as a porxy for credit constriaint
-  bid_failures; a counting variable  the number of time norfolk offer is less than that of the agents unique valaution
+  empty ; boolean variable representing avaibility of mortgages in The Area, if true removes mortage credit
+  bid_failures ; a counting variable: the number of times norfolk offer is less than that of the agents unique valaution
 ]
 
 houses-own[
-  valuation ;  how much the agent represing a holdhold evalaution mortgage credit aviablity utilining patches  in ieghborhood
-  monetary_valuation
-  monetary_quality
-  soc_valuation
-  soc_quality
-  tenure ;  how long an agent represeing a household  has had a particular  mortgage
-  social_preference ;  it is a wieght of conitnuous value between 0 and 1 representing the importance of social ties to an agent representing a household.
-  network_threshold; the amoutn of the network quality that signlnal the agent to want to sell calcautated from intial network assessment .
-  network_quality;  household agent valuaiton of thier network
-  unique_valuation  ;a calculated value from  mortgaeg credit aviability utilizing patch in nieghborhood, as well as valautioons of networked households adjsuted by network quality
-  flagged ; a boolena varible marking  whether or not the agent has been offered a bid in block strategy
-  initial_valuation ; holds the initial value of the mortgage for the underlying patch - EJ
+  valuation ;  how much the agent representing a household evalautes their property
+  monetary_valuation ; value representing the monetary valuation of their property
+  monetary_quality ; value representing the monetary valuation of their property after accounting for the rest of the market
+  soc_valuation ; value representing the evaluation of a household's social network
+  soc_quality ; value representing the evaluation of a household's social network after accounting for the rest of the neighborhood
+  tenure ;  how long a household  has had a particular  mortgage
+  social_preference ;  a weight of continuous value between 0 and 1 representing the importance of social ties to a household
+  network_threshold ; the amount of the network quality that signals the agent to want to sell. calcautated from intial network assessment.
+  network_quality ; household agent valuation of their network
+  unique_valuation  ; variable for the final valuation of the household in one round of bidding to be compared with the buyer's offer
+  flagged ; boolean varible marking  whether or not the agent has been offered a bid
+  initial_valuation ; holds the initial value of the mortgage for the underlying patch
 ]
 
-links-own []
+links-own [] ; no link variables for current version
 
-
-globals[ ;
+globals[
+  ;########## Setup and output vars #############
   csv ; a data object that holds imported mortgage data
-  high_patch_data ; list of mortgage infomation between the 2nd adn 3rd deviation of the mortgage values from the csv data object
-  med_patch_data; list of mortgage infomation between the -1st and 1st deviation of the mortgage values from the csv data object
-  low_patch_data ; list of mortgage infomation between the -2nd and -3rd deviation of the mortgage values from the csv data object
   patch_data ; list of mortgage infomation from the csv data object
-  patch_data2 ; a back up file for sampling
-  high_value ; wieght to modify the sampple disitnrubution of   the high patch data variable in dist_list
-  med_value; weight  to modify sample distirbution of  med patch data  variable in dist_list
+  patch_data2 ; a back up list for sampling
+  high_value ; weight to modify the sampple distribution of the high patch data variable in dist_list
+  med_value ; weight to modify sample distirbution of med patch data variable in dist_list
   low_value ; weight to modify sampel distrbution of low patch data variable in dist_list
   dist_list ; A list of sampled mortgages
   gamma_list ; list of mortgage values pulled from gamma dist
   mortgage-buyout-ratio ; a variable for plotting the ratio of norfolk's buyout price to the underlying patch mortgage value
+
   ;############## Buyer values #########################
-  norfolk_offer ; the offer cacluated from our utility funciton  that is compoared to the agents represneting houseshold unique vlauation variable
-  interest_rate ; could represent  change in  percpetion of area due to development. The value coudl be postive or negative. For this model the interest rates are held at a constant of zero
+  norfolk_offer ; the offer calculated from our utility funciton that is compared to a houseshold's unique vlauation variable
+  interest_rate ; could represent change in  perception of area due to development. The value could be positive or negative. For this model the interest rates are held at a constant of zero
   blocklist; a list of agent repreenitn household that will compare norfolk offer to it's unique valutions.
   non-normalized-norfolk-offer ; a variable storing the non-normalized norfolk offer so that it can be used to find the ratio of the offer to the mortgage
   success-flag
-  ;##################### file ssytems ############################
+
+  ;##################### file system ############################
   counter ; counter for file system
   m_counter ; coutner for meta file ssytem
   active_file ; a place to hold file names
   meta_file ; hold metafiel names
- ; instance_cnt ; this holds the instance order of event for Selling action
   hold_out_ratio ; holds the ratio of refused bids to the total number of houses that have rejected bids, this variable represents how resistant the collective households are to being bought out
   success-total ; holds total number of successful bids
   bid_refused_total ; holds the number of refused bids
@@ -192,9 +189,7 @@ to colorize_houses ;color by number of network connections
 end
 
 
-;;;;;;;;;;;;;;;; xxxxxxxxxxxxxxxxx   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;##################################### Network QUality;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;##################################### Network Quality;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 to network_q_effect
       ask houses [set network_threshold (count my-out-links * tenure * social_preference) ]
@@ -230,15 +225,11 @@ end
 ;############## attributes of houses in network adn network interacting variables##################################
 
 to turtle_initial_attributes ; update valuation to be  intial-valaution
- ; ask houses[set valuation ((mortgage + mean[mortgage]of patches with [empty != true and norfolk_owned != true ]  in-radius  1) / 2)
-  ;print valuation
-  ask houses [set initial_valuation ( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2] ; update apr 22- MJ
-  ;] ; give tutle unique valuation that is connected to events around it in regard to investments;valautuin ca be average of nieghbors of my turels or in radiaus of tutles;ask house to take average of mortgage from patch in nieghborhood
+  ask houses [set initial_valuation ( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2]
   ask houses[set tenure(1 + random 70)]
-     ; 1tenure is randon due to populaiton data showing that under 70 the disitbrution for ages are flat meanign equal values for each one
   social_preference_value
   social_network_assessment
-  social_preference_value;assigns social preference as dummy variable - can now assing percentage of true values
+  social_preference_value ; assigns social preference as dummy variable - can now assing percentage of true values
 
   ; [UPDATES JUNE 3RD --- have postive and negative intervest rate that is change step wise -----...... this valaution will be normalized by maximum of houses at a particualr time-step  ]
   ; July 12- new intial attributes   sets tenure, sets social prefernce that impacts social_valuation, SNA fucniton sets up network quality for nest fucniton
@@ -562,29 +553,32 @@ end
 
 ; FUNCTION CALL  OPERATIONS MAIN CALL LIST ############################################################################################
 to setup
- clear-all
+  clear-all
   reset-ticks
   set-default-shape houses "house"
-;  check_file ; for now I"m commenting this out - ej
-;  write_meta_file ; for now I'm commenting this out -ej
-;  write_header ; for now I"m commenting this out - ej
+  if simulation-output = true[
+    check_file
+    write_meta_file
+    write_header
+  ]
   ;#Patch Data Import#
   if distribution = "Real"
       [set_data_import  setup_patches patch_effects]
   if distribution = "Simulated"
       [gamma_dist_generation gamma_patch_set_up patch_effects]
-  set high_value count patches with[mortgage >= 252150] ; 252150,267000 actual range for high
-  set med_value count patches with [mortgage <= 252149 and mortgage >= 221101] ; 221101,252149 actual range for mid
-  set low_value count patches with [mortgage <= 221100 and mortgage > 1]   ;114000,221100  actual range for  low
- ; the count funciton capture that thie distirbution scales can only skew the distirbution not directly incease or decrese # of patches w/ x value
- ;# Turltle Setup
+
+  let std-dev standard-deviation [mortgage] of patches
+  let avg mean [mortgage] of patches
+  set high_value count patches with[mortgage >= avg + (std-dev * 2)]
+  set med_value count patches with [mortgage <= (avg + std-dev) and mortgage >= (avg - std-dev)]
+  set low_value count patches with [mortgage <= avg - (std-dev * 2)]
+
   setup_houses
   ask houses [set_monetary_valuation ]
 
   do-plotting
 
-
-reset-ticks
+  reset-ticks
 end
 
 
@@ -696,10 +690,10 @@ NIL
 1
 
 SLIDER
-9
-54
-187
-87
+10
+86
+188
+119
 residential_density
 residential_density
 50
@@ -711,10 +705,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-12
-228
-168
-261
+13
+260
+169
+293
 prefered_network
 prefered_network
 0
@@ -737,10 +731,10 @@ NIL
 HORIZONTAL
 
 CHOOSER
-10
-92
-148
-137
+11
+124
+149
+169
 resident_strategy
 resident_strategy
 "Linear" "Nested"
@@ -762,10 +756,10 @@ offer_adjustment
 HORIZONTAL
 
 PLOT
-13
-366
-228
-486
+14
+398
+229
+518
 Network Distribution
 # of Links
 Households
@@ -780,10 +774,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [count link-neighbors] of houses"
 
 MONITOR
-95
-318
-169
-363
+96
+350
+170
+395
 Network  4+
 count turtles with [color = blue]
 17
@@ -791,10 +785,10 @@ count turtles with [color = blue]
 11
 
 MONITOR
-12
-318
-84
-363
+13
+350
+85
+395
 Network 1
 count turtles with [color = red]
 17
@@ -802,10 +796,10 @@ count turtles with [color = red]
 11
 
 MONITOR
-95
-264
-169
-309
+96
+296
+170
+341
 Network 2+
 count turtles with [color = yellow]
 17
@@ -813,10 +807,10 @@ count turtles with [color = yellow]
 11
 
 MONITOR
-11
-264
-85
-309
+12
+296
+86
+341
 Network 0
 count turtles with [color = grey]
 17
@@ -868,10 +862,10 @@ impact_effects
 -1000
 
 SLIDER
-10
-140
-182
-173
+11
+172
+183
+205
 social_affinity
 social_affinity
 10
@@ -987,25 +981,26 @@ mort_stnd_dev
 NIL
 HORIZONTAL
 
-TEXTBOX
-83
-795
-298
-824
-Somethings is not right with our histogram graph. 
-11
-0.0
-1
-
 CHOOSER
-11
-177
-149
-222
+12
+209
+150
+254
 Social_type
 Social_type
 "Hetero" "Homo"
 0
+
+SWITCH
+11
+50
+162
+83
+simulation-output
+simulation-output
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
