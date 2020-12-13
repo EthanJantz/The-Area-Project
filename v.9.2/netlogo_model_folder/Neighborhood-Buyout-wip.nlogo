@@ -1,6 +1,5 @@
 extensions[py csv]
 breed [houses house]
-;breed [nor_agents nor_agent] ; probably unnecessary - ej
 
 patches-own[
 
@@ -39,22 +38,23 @@ globals[ ;
   med_value; weight  to modify sample distirbution of  med patch data  variable in dist_list
   low_value ; weight to modify sampel distrbution of low patch data variable in dist_list
   dist_list ; A list of sampled mortgages
+  gamma_list ; list of mortgage values pulled from gamma dist
+  mortgage-buyout-ratio ; a variable for plotting the ratio of norfolk's buyout price to the underlying patch mortgage value
+  ;############## Buyer values #########################
   norfolk_offer ; the offer cacluated from our utility funciton  that is compoared to the agents represneting houseshold unique vlauation variable
   interest_rate ; could represent  change in  percpetion of area due to development. The value coudl be postive or negative. For this model the interest rates are held at a constant of zero
   blocklist; a list of agent repreenitn household that will compare norfolk offer to it's unique valutions.
-  mortgage-buyout-ratio ; a variable for plotting the ratio of norfolk's buyout price to the underlying patch mortgage value
   non-normalized-norfolk-offer ; a variable storing the non-normalized norfolk offer so that it can be used to find the ratio of the offer to the mortgage
   success-flag
-  success-total
   ;##################### file ssytems ############################
   counter ; counter for file system
   m_counter ; coutner for meta file ssytem
   active_file ; a place to hold file names
   meta_file ; hold metafiel names
  ; instance_cnt ; this holds the instance order of event for Selling action
+  hold_out_ratio ; holds the ratio of refused bids to the total number of houses that have rejected bids, this variable represents how resistant the collective households are to being bought out
+  success-total ; holds total number of successful bids
   bid_refused_total ; holds the number of refused bids
-  hold_out_ratio ;
-  gamma_list
 ]
 
 ;;;;;;;; Patch  Operations ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -392,7 +392,7 @@ to norfolk_bid ; bid function is inside of search function
   print "Norfolk bid occured"
   print "Norfolk offer"
   print norfolk_offer
-  set-current-plot "Purchase Price to Mortgage* Ratio" ; the Mortgage* here refers to the monetary valuation, as that value is a composite variable that is much more robust adn refelctive on our intent to show purchasing value to  house valuation
+  set-current-plot "Purchase Price to Household Valuation Ratio" ; the Mortgage* here refers to the monetary valuation, as that value is a composite variable that is much more robust adn refelctive on our intent to show purchasing value to  house valuation
   plot mortgage-buyout-ratio
 end
 
@@ -421,14 +421,6 @@ to norfolk_bid_search
     norfolk_bid
   ] ; this is asking things concurrently
 end
-
-; MISC items added that haven't been placed in operation grouping
-
-to empty_lot_aqusition
- if empty = true ;
-      [set norfolk_owned True set pcolor violet ]
-end
-
 
 to secondary_impacts
   ask neighbors[if norfolk_owned = true [set mortgage mortgage - (mortgage * (.01 * negative_impact))]] ; changed so valaution of nieghbors-agent valution is decreased.
@@ -654,33 +646,33 @@ NIL
 1
 
 MONITOR
-697
-401
-775
-446
-High Value Mortgage Sample Space
+717
+244
+857
+289
+>= 2 Std Dev Mortgages
 high_value
 17
 1
 11
 
 MONITOR
-697
-322
-774
-367
-Mid Value Mortgage Sample Space
-med_value
+717
+197
+856
+242
++-1 Std Dev Mortgages
+med_value\n;these buckes are based on standard deviation from mean: \n;Low Value = 2 below \n;Middle value = within 1 standard deviateion\n;High value = 2 above\n;each had equally  6,000 entries generated
 17
 1
 11
 
 MONITOR
-701
-240
-776
-285
-Low Value Mortgage Sample Space
+716
+149
+855
+194
+<= -2 Std Dev Mortgages
 low_value
 17
 1
@@ -704,10 +696,10 @@ NIL
 1
 
 SLIDER
-11
-51
-189
-84
+9
+54
+187
+87
 residential_density
 residential_density
 50
@@ -719,10 +711,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-20
-251
-186
-284
+12
+228
+168
+261
 prefered_network
 prefered_network
 0
@@ -730,35 +722,35 @@ prefered_network
 -1000
 
 SLIDER
-15
-299
-187
-332
+249
+473
+406
+506
 blocksize
 blocksize
 1
 1080
-105.0
+109.0
 1
 1
 NIL
 HORIZONTAL
 
 CHOOSER
-45
-96
-183
-141
+10
+92
+148
+137
 resident_strategy
 resident_strategy
 "Linear" "Nested"
 1
 
 SLIDER
-17
-342
-189
-375
+248
+508
+407
+541
 offer_adjustment
 offer_adjustment
 1
@@ -770,10 +762,10 @@ offer_adjustment
 HORIZONTAL
 
 PLOT
-17
-470
-368
-620
+13
+366
+228
+486
 Network Distribution
 # of Links
 Households
@@ -788,10 +780,10 @@ PENS
 "default" 1.0 1 -16777216 true "" "histogram [count link-neighbors] of houses"
 
 MONITOR
-793
-396
-877
-441
+95
+318
+169
+363
 Network  4+
 count turtles with [color = blue]
 17
@@ -799,10 +791,10 @@ count turtles with [color = blue]
 11
 
 MONITOR
-793
-293
-865
-338
+12
+318
+84
+363
 Network 1
 count turtles with [color = red]
 17
@@ -810,10 +802,10 @@ count turtles with [color = red]
 11
 
 MONITOR
-793
-342
-871
-387
+95
+264
+169
+309
 Network 2+
 count turtles with [color = yellow]
 17
@@ -821,10 +813,10 @@ count turtles with [color = yellow]
 11
 
 MONITOR
-792
-239
-864
-284
+11
+264
+85
+309
 Network 0
 count turtles with [color = grey]
 17
@@ -832,10 +824,10 @@ count turtles with [color = grey]
 11
 
 PLOT
-17
-634
-401
-784
+716
+308
+976
+448
 Mortgage Distribution
 Mortgage Amount
 # of Mortgage
@@ -847,13 +839,13 @@ true
 false
 "" ""
 PENS
-"default" 10.0 1 -16777216 true "" "histogram [mortgage] of patches"
+"default" 20.0 1 -16777216 true "" "histogram [mortgage] of patches"
 
 SLIDER
-17
-427
-198
-460
+693
+504
+874
+537
 negative_impact
 negative_impact
 0
@@ -865,10 +857,10 @@ negative_impact
 HORIZONTAL
 
 SWITCH
-20
-387
-167
-420
+694
+465
+841
+498
 impact_effects
 impact_effects
 0
@@ -876,10 +868,10 @@ impact_effects
 -1000
 
 SLIDER
-16
-151
-188
-184
+10
+140
+182
+173
 social_affinity
 social_affinity
 10
@@ -891,11 +883,11 @@ social_affinity
 HORIZONTAL
 
 PLOT
-411
-635
-807
-785
-Purchase Price to Mortgage* Ratio
+248
+597
+685
+747
+Purchase Price to Household Valuation Ratio
 Bids
 Ratio
 0.0
@@ -908,33 +900,11 @@ false
 PENS
 "default" 1.0 0 -16777216 true "" "plot mortgage-buyout-ratio"
 
-MONITOR
-819
-676
-959
-721
-NIL
-mortgage-buyout-ratio
-17
-1
-11
-
-MONITOR
-820
-740
-1001
-785
-NIL
-max [bid_failures] of patches
-17
-1
-11
-
 PLOT
-386
-467
-774
-617
+422
+463
+683
+591
 Norfolk Offer
 NIL
 NIL
@@ -942,17 +912,17 @@ NIL
 10.0
 150000.0
 300000.0
-true
+false
 false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot non-normalized-norfolk-offer"
 
 MONITOR
-797
-571
-969
-616
+249
+545
+409
+590
 NIL
 non-normalized-norfolk-offer
 17
@@ -960,10 +930,10 @@ non-normalized-norfolk-offer
 11
 
 PLOT
-881
-241
-1209
-391
+696
+597
+968
+748
 Hold Out Ratio
 Ticks
 Holdout Ratio
@@ -1018,16 +988,6 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-918
-79
-1133
-137
-high mean and low stnard deviation : skew left \nlow mean high standard deviation : skew right \n
-11
-0.0
-1
-
-TEXTBOX
 83
 795
 298
@@ -1037,53 +997,11 @@ Somethings is not right with our histogram graph.
 0.0
 1
 
-TEXTBOX
-698
-157
-1116
-232
-these buckes are based on standard deviation from mean: \nLow Value = 2 below \nMiddle value = within 1 standard deviateion\nHigh value = 2 above\neach had equally  6,000 entries generated  \n#bad statistics 
-11
-0.0
-1
-
-MONITOR
-796
-461
-966
-506
-Network Isolated Houses 
-count houses with[ count link-neighbors = 0]
-17
-1
-11
-
-MONITOR
-796
-515
-969
-560
-Neighbor Isolated Houses
-count houses with [count (neighbors with[norfolk_owned = true or empty = true]) > 0]
-17
-1
-11
-
-TEXTBOX
-517
-800
-785
-856
-* Actually the monetary valuation of the home being purchased at the time of purchase\n
-11
-0.0
-1
-
 CHOOSER
-48
-191
-186
-236
+11
+177
+149
+222
 Social_type
 Social_type
 "Hetero" "Homo"
@@ -1100,25 +1018,29 @@ At the beginning of the model a matrix of patches are assigned mortgage values f
 
 During the valuation stage of the cycle houses assess a valuation of their property. The valuation includes their monetary valuation of the property and a social valuation that assess their neighbors property valuations. Depending on which strategy the user selects the valuation can be done using a linear valuation algorithm or a nested one. The linear valuation has each house assess their value based on the social and monetary valuations and includes the valuation of any other houses in their network, if any network links are present. The nested valuation strategy incorporates a decision tree based on network links and social preferences that creates a valuation incorporating the average valuation of linked and nearby houses. 
 
-The bidding stage utilizes the observer to act as the corporation. The observer flags a random set of houses based on the block size variable and sets an offer for each flagged house based on the underlying patch mortgage, the offer adjustment variable, the number of failed bids, the average mortgage value of already purchased property and the average value of all patches. If the offer is not higher than a house's valuation the bid fails. If the offer is higher the house and its underlying patch are purchased. If negative impact is set to on, the mortgage value of adjacent patches not owned by the observer are reduced by the negative impact variable. The house on the purchased patch is removed and network links are severed.
+The bidding stage utilizes the observer to act as the buyer entity. The observer flags a random set of houses based on the block size variable and sets an offer for each flagged house based on the underlying patch mortgage, the offer adjustment variable, the number of failed bids, the average mortgage value of already purchased property and the average value of all patches. If the offer is not higher than a house's valuation the bid fails. If the offer is higher the house and its underlying patch are purchased. If negative impact is set to on, the mortgage value of adjacent patches not owned by the observer are reduced by the negative impact variable. The house on the purchased patch is removed and network links are severed.
 
 These two stages of the cycle continue until all of the houses have been purchased. 
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+To run the simulation press setup. Once the market and houses have populated the landscape you can press go for the simulation to run to completion. 
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+Pay attention to the network distribution, the Purchase Price to Household Valuation Ratio plot, and the holdout ratio. Their changes throughout each simulation highlight key dynamics to consider in understanding the mechanisms of an assymetrical housing market with a powerful purchaser.
+
+One important output of this model is the individual bidding actions output at the end of each simulation within the model folder. You can keep these for analysis or discard them, but they capture details on each individual bid made by the buyer entity and information on how the household responded.
 
 ## THINGS TO TRY
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+Try changing the 
 
 ## EXTENDING THE MODEL
 
 (suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+
+Including a interest-rate slider for the user to toy with
 
 ## NETLOGO FEATURES
 
