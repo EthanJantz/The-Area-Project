@@ -668,7 +668,7 @@ residential_density
 residential_density
 50
 1080
-500.0
+540.0
 10
 1
 NIL
@@ -686,18 +686,18 @@ prefered_network
 -1000
 
 SLIDER
-249
-473
-406
-506
+248
+471
+429
+504
 blocksize
 blocksize
 1
 1080
-20.0
+25.0
 1
 1
-NIL
+households per tick
 HORIZONTAL
 
 CHOOSER
@@ -719,7 +719,7 @@ offer_adjustment
 offer_adjustment
 1
 100
-10.0
+20.0
 1
 1
 %
@@ -840,7 +840,7 @@ social_affinity
 social_affinity
 10
 100
-50.0
+90.0
 10
 1
 %
@@ -865,7 +865,7 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot mortgage-buyout-ratio"
 
 PLOT
-422
+431
 463
 683
 591
@@ -945,7 +945,7 @@ mort_stnd_dev
 mort_stnd_dev
 5000
 100000
-9500.0
+42500.0
 1500
 1
 NIL
