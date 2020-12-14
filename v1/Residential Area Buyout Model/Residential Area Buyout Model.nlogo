@@ -365,10 +365,16 @@ end
 ;##################### Plotting ##################################
 to do-plotting
   set-current-plot "Mortgage Distribution"
-  let minimum_x min [mortgage] of patches with [mortgage > 1]
-  set-plot-x-range minimum_x (max [mortgage] of patches)
+  let min-x precision (min [mortgage] of patches with [mortgage > 1]) 0
+  let max-x precision (max [mortgage] of patches with [mortgage > 1]) 0
+  set-plot-x-range min-x max-x
   set-plot-y-range 0 count patches with [mortgage > 1]
   set-histogram-num-bars 10
+
+  set-current-plot "Buyer Offer"
+  let min-y precision (min [mortgage] of patches) 0
+  let max-y precision (max [mortgage] of patches) 0
+  set-plot-y-range min-y max-y
 
   set-current-plot "Network Distribution"
   set-plot-x-range 0 max [count link-neighbors] of houses
