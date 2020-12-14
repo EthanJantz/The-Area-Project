@@ -1,0 +1,125 @@
+---
+title: "Area Project Analysis"
+author: "Ethan Jantz"
+date: "12/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(RSQLite)
+
+sqlite.driver <- dbDriver("SQLite")
+
+base <- "Data/area_base_mydatabase.db"
+asym <- "Data/asymeticalmydatabase.db"
+aff <- "Data/area_affluentmydatabase.db"
+
+db_base <- dbConnect(sqlite.driver,
+                     dbname = base)
+
+db_asym <- dbConnect(sqlite.driver,
+                     dbname = asym)
+
+db_aff <- dbConnect(sqlite.driver,
+                    dbname = aff)
+```
+
+```{r base}
+base_table <- dbGetQuery(db_base, 'SELECT * FROM file_title')
+
+base_table <- base_table %>%
+  mutate(
+    FourH_Network = gsub("x", "", FourH_Network),
+    Social_Type = gsub("\n", "", Social_Type)
+    )
+
+base_analysis <- base_table %>% 
+  group_by(Ticks) %>%
+  summarize(
+    houses_avg_endoftick = mean(Houses),
+    houses_at_setup = max(Resident_Density),
+    links_avg = mean(Total_Links),
+    links_med = median(Total_Links),
+    links_max = max(Total_Links),
+    links_min = min(Total_Links),
+    buyout_ratio_avg = mean(Mortgage_Buyout_Ratio),
+    buyout_ratio_med = median(Mortgage_Buyout_Ratio),
+    buyout_ratio_max = max(Mortgage_Buyout_Ratio),
+    buyout_ratio_min = min(Mortgage_Buyout_Ratio),
+    successes_avg = mean(Total_Success),
+    fail_rate = 1 - mean(Success)
+  ) %>%
+  mutate(
+    pct_houses_bought = houses_avg_endoftick / houses_at_setup,
+    buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
+  )
+
+write_csv(base_analysis, "baseSim.csv")
+```
+
+```{r aff}
+aff_table <- dbGetQuery(db_aff, 'SELECT * FROM file_title')
+
+aff_table <- aff_table %>%
+  mutate(
+    FourH_Network = gsub("x", "", FourH_Network),
+    Social_Type = gsub("\n", "", Social_Type)
+    )
+
+aff_analysis <- aff_table %>% 
+  group_by(Ticks) %>%
+  summarize(
+    houses_avg_endoftick = mean(Houses),
+    houses_at_setup = max(Resident_Density),
+    links_avg = mean(Total_Links),
+    links_med = median(Total_Links),
+    links_max = max(Total_Links),
+    links_min = min(Total_Links),
+    buyout_ratio_avg = mean(Mortgage_Buyout_Ratio),
+    buyout_ratio_med = median(Mortgage_Buyout_Ratio),
+    buyout_ratio_max = max(Mortgage_Buyout_Ratio),
+    buyout_ratio_min = min(Mortgage_Buyout_Ratio),
+    successes_avg = mean(Total_Success),
+    fail_rate = 1 - mean(Success)
+  ) %>%
+  mutate(
+    pct_houses_bought = houses_avg_endoftick / houses_at_setup,
+    buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
+  )
+
+write_csv(aff_analysis, "affSim.csv")
+```
+
+```{r asym}
+asym_table <- dbGetQuery(db_asym, 'SELECT * FROM file_title')
+
+asym_table <- asym_table %>%
+  mutate(
+    FourH_Network = gsub("x", "", FourH_Network),
+    Social_Type = gsub("\n", "", Social_Type)
+    )
+
+asym_analysis <- asym_table %>% 
+  group_by(Ticks) %>%
+  summarize(
+    houses_avg_endoftick = mean(Houses),
+    houses_at_setup = max(Resident_Density),
+    links_avg = mean(Total_Links),
+    links_med = median(Total_Links),
+    links_max = max(Total_Links),
+    links_min = min(Total_Links),
+    buyout_ratio_avg = mean(Mortgage_Buyout_Ratio),
+    buyout_ratio_med = median(Mortgage_Buyout_Ratio),
+    buyout_ratio_max = max(Mortgage_Buyout_Ratio),
+    buyout_ratio_min = min(Mortgage_Buyout_Ratio),
+    successes_avg = mean(Total_Success),
+    fail_rate = 1 - mean(Success)
+  ) %>%
+  mutate(
+    pct_houses_bought = houses_avg_endoftick / houses_at_setup,
+    buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
+  )
+write_csv(asym_analysis, "asymSim.csv")
+```
