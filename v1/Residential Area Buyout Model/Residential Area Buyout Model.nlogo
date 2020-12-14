@@ -610,10 +610,10 @@ NIL
 1
 
 MONITOR
-717
-244
-857
-289
+692
+254
+832
+299
 >= 2 Std Dev Mortgages
 high_value
 17
@@ -621,10 +621,10 @@ high_value
 11
 
 MONITOR
-717
-197
-856
-242
+692
+207
+831
+252
 +-1 Std Dev Mortgages
 med_value\n;these buckes are based on standard deviation from mean: \n;Low Value = 2 below \n;Middle value = within 1 standard deviateion\n;High value = 2 above\n;each had equally  6,000 entries generated
 17
@@ -632,10 +632,10 @@ med_value\n;these buckes are based on standard deviation from mean: \n;Low Value
 11
 
 MONITOR
-716
-149
-855
-194
+691
+159
+830
+204
 <= -2 Std Dev Mortgages
 low_value
 17
@@ -788,10 +788,10 @@ count turtles with [color = grey]
 11
 
 PLOT
-718
-296
-978
-448
+693
+306
+953
+458
 Mortgage Distribution
 Mortgage Amount
 # of Mortgage Holders
@@ -912,20 +912,20 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot hold_out_ratio"
 
 CHOOSER
-716
-17
-873
-62
+691
+27
+848
+72
 Distribution
 Distribution
 "Simulated" "Real"
 1
 
 SLIDER
-718
-70
-890
-103
+693
+80
+865
+113
 mean_mortgage
 mean_mortgage
 50000
@@ -937,10 +937,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-716
-110
-888
-143
+691
+120
+863
+153
 mort_stnd_dev
 mort_stnd_dev
 5000
