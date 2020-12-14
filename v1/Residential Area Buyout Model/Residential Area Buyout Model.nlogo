@@ -1024,11 +1024,19 @@ Our model utilizes the output and plot drawing functions in ways that we don't t
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+Model mechanisms used in this model include those developed or described in the following works:
+
+Magliocca, Nicholas, et al. “An Economic Agent-Based Model of Coupled Housing and Land Markets (CHALMS).” Computers, Environment and Urban Systems, vol. 35, no. 3, May 2011, pp. 183–91. ScienceDirect, doi:10.1016/j.compenvurbsys.2011.01.002.
+
+Rand, W., et al. THE COMPLEX INTERACTION OF AGENTS AND ENVIRONMENTS: AN EXAMPLE IN URBAN SPRAWL. Center for the Study of Complex Systems, University of Michigan, Ann Arbor, MI
+ 
+Wilensky, U. (2005). NetLogo Preferential Attachment model. http://ccl.northwestern.edu/netlogo/models/PreferentialAttachment. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+This model was developed by Ethan Jantz and Michael Johnson with direction from Moira Zellner at the Urban Digital Visualization Lab in Chicago, IL. 
+
+Jantz and Johnson (2020) Residential Area Buyout Model. Urban Digital Visualization Lab, University of Illinois - Chicago, Chicago, IL
 @#$#@#$#@
 default
 true
