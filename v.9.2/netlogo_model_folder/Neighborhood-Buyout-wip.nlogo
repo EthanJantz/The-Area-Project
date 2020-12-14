@@ -3,7 +3,7 @@ breed [houses house]
 
 patches-own[
   mortgage ; Mortgage for each patch is representative of mortgage credit avaliability for nieghborhood.
-  norfolk_owned
+  buyer_owned
   empty ; boolean variable representing avaibility of mortgages in The Area, if true removes mortage credit
   bid_failures ; a counting variable: the number of times norfolk offer is less than that of the agents unique valaution
 ]
@@ -30,344 +30,288 @@ globals[
   csv ; a data object that holds imported mortgage data
   patch_data ; list of mortgage infomation from the csv data object
   patch_data2 ; a back up list for sampling
-  high_value ; weight to modify the sampple distribution of the high patch data variable in dist_list
-  med_value ; weight to modify sample distirbution of med patch data variable in dist_list
-  low_value ; weight to modify sampel distrbution of low patch data variable in dist_list
-  dist_list ; A list of sampled mortgages
-  gamma_list ; list of mortgage values pulled from gamma dist
+  high_value ; output holding number of patches with mortgages above 2 * std-dev of mean
+  med_value ; output holding number of patches with mortgages within 1 std-dev of mean
+  low_value ; output holding number of patches with mortgages below 2 * std-dev of mean
+  dist_list ; list of sampled mortgages
+  gamma_list ; list of simulated mortgage values
   mortgage-buyout-ratio ; a variable for plotting the ratio of norfolk's buyout price to the underlying patch mortgage value
 
   ;############## Buyer values #########################
-  norfolk_offer ; the offer calculated from our utility funciton that is compared to a houseshold's unique vlauation variable
+  buyer_offer ; the offer that is compared to a houseshold's unique vlauation variable
   interest_rate ; could represent change in  perception of area due to development. The value could be positive or negative. For this model the interest rates are held at a constant of zero
-  blocklist; a list of agent repreenitn household that will compare norfolk offer to it's unique valutions.
-  non-normalized-norfolk-offer ; a variable storing the non-normalized norfolk offer so that it can be used to find the ratio of the offer to the mortgage
+  blocklist ; a list of households that will be offered bids, changes each tick
+  non-normalized-buyer-offer ; a variable storing the non-normalized buyer offer so that it can be used to find the ratio of the offer to the household's monetary valuation
   success-flag
 
   ;##################### file system ############################
   counter ; counter for file system
-  m_counter ; coutner for meta file ssytem
+  m_counter ; counter for meta file system
   active_file ; a place to hold file names
-  meta_file ; hold metafiel names
+  meta_file ; hold metafile names
   hold_out_ratio ; holds the ratio of refused bids to the total number of houses that have rejected bids, this variable represents how resistant the collective households are to being bought out
   success-total ; holds total number of successful bids
   bid_refused_total ; holds the number of refused bids
 ]
 
-;;;;;;;; Patch  Operations ;;;;;;;;;;;;;;;;;;;;;;;;
+;########### Patch Setup ##################
 
 to value_loss ; sets the color of the credit impacted patches
   ask patches [if empty = True
-                [set mortgage  0 ; to represent that a patch has no available credit
+    [
+      set mortgage  0 ; to represent that a patch that has no house
       set pcolor black
-     ]]
+    ]
+  ]
 end
 
-to patch_effects ; mj
+to patch_effects
   value_loss
-  ask patches [ set pcolor scale-color green mortgage 110000 350000] ;MJ
+  let std-dev standard-deviation [mortgage] of patches
+  let avg mean [mortgage] of patches
+  ask patches [set pcolor scale-color green mortgage (avg + (std-dev * 2)) (avg - (std-dev * 2))]
 end
 
-;;;;;;;;;;;;;;;;;;;;;;Standard Distribution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Full_dist.txt distribution: Has no modifiers on GUI
 
-to setup_patches ;MJ initializes the patches, giving each patch a mortgage value that is used by turtles to determine their unique valuations
-  ; vacancies are implemented after the resident investment is set, and the then empty properties have their mortgage reduced to 1
-  clear-patches
- ; ask patches [set mortgage one-of patch_data]
-  ;ask patches [set patch_data remove mortgage patch_data]
-
-  loop [ ifelse (any? patches with [mortgage = 0])
-        [ ifelse (empty? patch_data  )
-          [ask one-of patches with [mortgage = 0] [set mortgage one-of patch_data
-
-            set patch_data remove-item (position mortgage patch_data) patch_data
-
-
-           ]] ;removes already assigned mortgage ---needs to iterate
-
-           [set patch_data (patch_data2)
-            ask one-of patches with [mortgage = 0] [set mortgage one-of patch_data ; how to remove item from list after selection
-            set patch_data remove-item (position mortgage patch_data) patch_data]]
-
-       ]
-       [stop]
-       ]
-  ;( 0.01 * ( abs min-pxcor * 1.414 ) ) ( 0.99 * ( abs min-pxcor * 1.414 ) )]
-
-end
-;;;;;;;;;;;;;;;;;;;;;;;; xxxxxxxxxxxxxxxxxxxxxxxxxxxx ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;Patch Modification  OPERATIONS  ############################################################################
-
-to set_data_import
-   set patch_data []
+to real_data_import
+  set patch_data []
   ifelse(file-exists? "full_dist.txt")
     [
       file-open "full_dist.txt"  ; txt file easier than csv
-      set csv csv:from-file "full_dist.txt" ; imporper funciton usage but it works
-      set patch_data  one-of csv ; imporper funciton useage  but it works
-      set patch_data2 patch_data
-
-    ;print csv
-
-    file-close]
-  [user-message "There is no distribution file"]
+      set csv csv:from-file "full_dist.txt" ; improper funciton usage but it works
+      set patch_data  one-of csv ; improper function usage but it works
+      set patch_data2 patch_data ; backup of patch_data
+      file-close
+  ]
+  [user-message "There is no distribution file. Please locate full_dist.txt or run using a simulated distribution."]
 end
 
-
-
-
-;;; Gamma Distribtuion modifier --generate a range of disitrbution mirroring then contorting as we change gui parameters.
+;;; Gamma Distribution modifier: generate a distribution based on user params
 
 to gamma_dist_generation
  set gamma_list []
  let instance_count  0
- ; print count patches  with [empty != True]
-  loop [ ifelse (count patches with [mortgage = 0] > instance_count + 100)
-    [ print "gamma list creation"
+  loop [
+    ifelse (count patches with [mortgage = 0] > instance_count + 100)
+    [
+      ;print "gamma list creation"
       set gamma_list lput (random-gamma ((mean_mortgage ^ 2 / mort_stnd_dev ^ 2 )) (1 / ((mort_stnd_dev ^ 2) / mean_mortgage ))) gamma_list
-        ;  this should take the random gamme input for alpha =  and lamba =
-      set instance_count instance_count + 1 ]
-
-      [print "stopped" stop]
-       ]
- ;print gamma_list
-  ; this shoould create a list of a unified gamma disotrbution for every patch that has not been assigned empty
- ; improvement  to old code in that it relies on interna list generation
-  ; instance count also  coutns the number of patches that are on the baord
-
-
+      set instance_count instance_count + 1
+    ]
+    [print "Gamma distribution simulation complete" stop]
+  ]
 end
 
 to gamma_patch_set_up
   clear-patches
-  loop [ Ifelse(any? patches with [mortgage = 0])
-       [ ifelse (empty? gamma_list )
-          [ask one-of patches with [mortgage = 0] [set mortgage one-of gamma_list]
-             ask patches [set gamma_list remove-item (position mortgage gamma_list) gamma_list ]]
-
-      [set gamma_list lput (random-gamma ((mean_mortgage ^ 2 / mort_stnd_dev ^ 2 )) (1 / ((mort_stnd_dev ^ 2) / mean_mortgage ))) gamma_list
-        ask one-of patches with[mortgage = 0] [set mortgage one-of gamma_list
-        set gamma_list remove-item (position mortgage gamma_list) gamma_list ]]
+  loop [
+    ifelse(any? patches with [mortgage = 0])
+    [
+      ifelse (empty? gamma_list )
+      [
+        ask one-of patches with [mortgage = 0] [set mortgage one-of gamma_list]
+        ask patches [set gamma_list remove-item (position mortgage gamma_list) gamma_list]
+      ]
+      [
+        set gamma_list lput (random-gamma ((mean_mortgage ^ 2 / mort_stnd_dev ^ 2 )) (1 / ((mort_stnd_dev ^ 2) / mean_mortgage ))) gamma_list
+        ask one-of patches with [mortgage = 0]
+        [
+          set mortgage one-of gamma_list
+          set gamma_list remove-item (position mortgage gamma_list) gamma_list
+        ]
+      ]
     ]
     [stop]
   ]
-        ; like a deck of cards  thi shoud pull a gamma list value and remove that unique instance of said value from dist list to have selection with exclusion
-  ; could not be working  if the instance of the mortgage call and assignment is not the same as removal
-  ;  SD = 31,048,
 end
-;;;;;;;;;;;;;;;; NETWORK Structure  OPERATIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+to real_dist_setup ; initializes the patches, giving each patch a mortgage value that is used by households to determine their unique valuations
+  clear-patches
+
+  loop [
+    ifelse (any? patches with [mortgage = 0])
+    [
+      ifelse (empty? patch_data )
+      [ ; removes already assigned mortgage
+        ask one-of patches with [mortgage = 0]
+        [
+          set mortgage one-of patch_data
+          set patch_data remove-item (position mortgage patch_data) patch_data
+        ]
+      ]
+      [
+        set patch_data (patch_data2)
+        ask one-of patches with [mortgage = 0]
+        [
+          set mortgage one-of patch_data ; how to remove item from list after selection
+          set patch_data remove-item (position mortgage patch_data) patch_data
+        ]
+      ]
+    ]
+    [stop]
+  ]
+end
+
+;############ House Agent Creation and Network Generation #######################
 
 to  prefer_network
   ; preferential attachment network development, from the Preferential Attachment Network Simple Example in the  model library
   ask one-of patches with [empty != true ][ sprout-houses 1 ]
   ask one-of patches with [empty != true and any? turtles-here = false] [ sprout-houses 1 ]
   ask  house 0  [create-link-with  house 1]
-  loop [ ifelse (count houses < residential_density)
-             [let partner one-of [both-ends] of one-of links
-                  create-houses 1 [
-                          move-to one-of patches with [empty != true and any? turtles-here = false]
-        create-link-with partner ]
-    ] [stop]
+  loop [
+    ifelse (count houses < residential_density)
+    [
+      let partner one-of [both-ends] of one-of links
+      create-houses 1
+      [
+        move-to one-of patches with [empty != true and any? turtles-here = false]
+        create-link-with partner
+      ]
+    ]
+    [stop]
   ]
-
 end
 
-to random_network ; builds a random network among the agents representing households
+to random_network ; builds a random network among the households
   ask n-of residential_density patches with [empty != true and any? turtles-here = false] [sprout-houses 1]
   ask houses [let other-house random (count houses) if (other-house != [who] of self)[ create-link-with house other-house]]
-
 end
 
-to colorize_houses ;color by number of network connections
-   ask houses[
-                if ((count my-out-links) = 0) [set color gray]
-                if ((count my-out-links) > 0)[set color red]
-                if ((count my-out-links) >= 2)[set color yellow]
-                if ((count my-out-links) >= 4) [set color blue]
+to colorize_houses ;color houses by number of network connections
+  ask houses
+  [
+    if ((count my-out-links) = 0) [set color gray]
+    if ((count my-out-links) > 0)[set color red]
+    if ((count my-out-links) >= 2)[set color yellow]
+    if ((count my-out-links) >= 4) [set color blue]
   ]
 end
 
-
-;##################################### Network Quality;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;########### House Agent Variable Initialization ###################
 
 to network_q_effect
-      ask houses [set network_threshold (count my-out-links * tenure * social_preference) ]
-
+  ask houses [set network_threshold (count my-out-links * tenure * social_preference)]
 end
 
-to social_preference_value ;;;; ### add switch for homogenous vs heterogenous social preference;;;
-  ; assign vlaue to socal preference variable the will determien network quality for agents, soical preference value is determined my social-inteisity how postive or negative this relaitoships is
+to social_preference_value
   if social_type = "Hetero"
-  [  ask  houses[set social_preference  precision (random-float social_affinity * .01)2]  ]
+  [ask  houses[set social_preference precision (random-float social_affinity * .01) 2]]
   if social_type = "Homo"
-  [  ask  houses[set social_preference  precision (social_affinity * .01)2]  ]
-  ; remove social density as a controller as it only allow to shirnk or expand number of houses with a valaution of any sort
-   ; social intensity is a measure of socialiability--postive threshold-- the higher the number the gernally more content everyone is
+  [ask  houses[set social_preference precision (social_affinity * .01) 2]]
 end
 
-
-to social_network_assessment ; this is for nested desionc makings
-  ask houses[
-    set network_quality ((count my-out-links)* (tenure + ticks) ) ] ; create a unique network quality of tenure, tick link and random value on social_preference scale
+to social_network_assessment
+  ask houses[set network_quality ((count my-out-links) * (tenure + ticks))]
 end
 
 to set_social_valuation
   set soc_valuation ((count my-out-links) * (tenure + ticks))
 end
 
-;;;;;;;;;;;;;;;;;;;; Monetary_operations::::::::::::::::::::::::::::::::::::::::::::
-
 to set_monetary_valuation ; creates mortage with interest inter action
-  set monetary_valuation (( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2 *(1 + (interest_rate * .01)))
-
+  set monetary_valuation (( mortgage + mean[mortgage] of patches with [empty != true and buyer_owned != true] in-radius 1)/ 2 *(1 + (interest_rate * .01)))
 end
-;############## attributes of houses in network adn network interacting variables##################################
 
-to turtle_initial_attributes ; update valuation to be  intial-valaution
-  ask houses [set initial_valuation ( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2]
-  ask houses[set tenure(1 + random 70)]
+to house_initialize
+  ask houses [set initial_valuation ( mortgage + mean[mortgage] of patches with [empty != true and buyer_owned != true] in-radius 1)/ 2]
+  ask houses [set tenure(1 + random 70)]
   social_preference_value
   social_network_assessment
-  social_preference_value ; assigns social preference as dummy variable - can now assing percentage of true values
-
-  ; [UPDATES JUNE 3RD --- have postive and negative intervest rate that is change step wise -----...... this valaution will be normalized by maximum of houses at a particualr time-step  ]
-  ; July 12- new intial attributes   sets tenure, sets social prefernce that impacts social_valuation, SNA fucniton sets up network quality for nest fucniton
+  social_preference_value
 end
 
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;; Houses  & Network Operations ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 to setup_houses
-  ;# Network Buidling  both random and preferential #
-   ifelse prefered_network = True
+  ifelse prefered_network = True
       [prefer_network]
       [random_network]
   network_q_effect
   colorize_houses
-  turtle_initial_attributes
+  house_initialize
 end
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; KEY FUNCTIONS FOR INQUIRY IN SOCIAL & DEVELOPMENT QUESTIONS
+;############### Valuation Cycle ############################
 
-to linear_res_valuation ; new resident valuation aka WILLINGNESS TO PAY  is used networkd valution of linked houses averaged out with central resdient investment  in surruonding (mortgage investment)area
-  ask houses [
-     if network_quality = 0 [stop]
-;Step 1 valuation with-out networked effects/linked nieghhors considerations ---- there is an issue with when and where to normalize!!!!!
-    ; step 1a monetary valution takes  mortge mean moritgae *  interest rate increase   will be impacted by seconday effect splits up step 1 ....
-    set_monetary_valuation ; interest intergrated and works on the assumption houses will havea YOY increase or decrese in monetary vaulautuion
-           ;set monetary_valuation ((1 - social_preference )*( mortgage + mean[mortgage] of patches with [empty != true and norfolk_owned != true] in-radius 1)/ 2) ; contains mortgage assestment based on limited sample of available mortgages -- average is used hen adust by interest rate
-      ;step 1b create social valutation
-    set_social_valuation ;socialprefrence intergrated into "set_social_valuation" function
-    ]
-    ;Componest are normalized below --this assumes a linear normative relaitonships amoong dynamics
-    ; step 1a-a
-  ask houses[
+to linear_res_valuation
+  ask houses
+  [
+    if network_quality = 0 [stop]
+    set_monetary_valuation
+    set_social_valuation
+  ]
+
+  ask houses
+  [
      set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
-     ; step 1b-a
      if max [soc_valuation] of houses > 0
         [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
-     ]
+  ]
 
-  ask houses [
-    ;step 1c  create valuation from  social value and montary valuae funcitonign independantly
-     set valuation  ((1 - social_preference) * monetary_quality) + (social_preference * soc_quality)  ;create updated network quality impacts, mortgage and interest interaction per iteration
-    ; operates on the assumption that there is an expectation of YOY change in  valuation given adequate "soical cohesion Interest rate"
-     ]
+  ask houses
+  [
+     set valuation  ((1 - social_preference) * monetary_quality) + (social_preference * soc_quality)
+  ]
 
-;Step 2 valuation  -- valuation here from above  plus added network and stats space. all normalized
- ask houses [
-  ifelse any? in-link-neighbors
-        [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2))] ;network quality is consider through linke neighbor valuation now better off or worse off neighbori nfleince agent decison making
-        ; doesn't capture negative interest rates [set unique_valuation (((( monetary_valuation + (mean[monetary_valuation] of link-neighbors)))/ 2)/ max [monetary_valuation] of houses)  + (soc_valuation / max[soc_valuation] of houses)]
-         [set unique_valuation valuation];thiscreate a valuation without network impacgts
-            ]
+ ask houses
+  [
+    ifelse any? in-link-neighbors
+    [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2))]
+    [set unique_valuation valuation]
+  ]
 end
 
-; own valution with out nieghbors  without based inital invesmtnet  + quality of network-- initial
-; average own valauiton + niehgborhood radius 1 +  network quality
-;Code updates
-           ;initial investment,  step 1 valuaiton without neihgbords(add network quality--this make it udate overtime) , average of valution with links + radius 1
-           ;  step 1 valuation w/o nieghbordh ( add network quality) _=== is compost of "last steps valution" still add network quality ( in function)
-; net step 1 funciton for  resdient invesemnt  valuation = $ x (1 - social_preference) + network_quality x social_preference  / max valuation
-
-; updated step 1 - last step valuation coming forward--postive growth, concern about normalization here
-; update step 2 in june 10th model step 2 uses previous unique valution when they have no more niehgbors to consutl
-
-
-; June 3rd notes
-; own valution with out nieghbors  without based inital invesmtnet  + quality of network-- initial
-; average own valauiton + niehgborhood radius 1 +  network quality
-;Code updates
-           ;initial investment,  step 1 valuaiton without neihgbords(add network quality--this make it udate overtime) , average of valution with links + radius 1
-           ;  step 1 valuation w/o nieghbordh ( add network quality) _=== is composed of "last steps valution" still add network quality (in function)
-            ; next steps for   valuation = $resdient invesemnt  x (1 - social_preference) + network_quality x social_preference  / max valuation
-
-to nested_resident_valuation ;
-
-   ask houses [
-               if network_quality = 0 [stop]
-               set_monetary_valuation ; interest intergrated and works on the assumption houses will havea YOY increase or decrese in monetary vaulautuion
-               set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
-               set_social_valuation ;socialprefrence intergrated into "set_social_valuation" function
-               if max [soc_valuation] of houses > 0
-                  [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
-
-
-               set valuation  (((1 - social_preference) * monetary_quality) + (social_preference * soc_quality))  ;create updated network quality impacts, mortgage and interest interaction per iteration
-                                     ;monetary preference = 1 - social preference
-
-               ifelse social_preference > 0 ; network threshold - intial network qulaity = network threshold
-                   ; have network quality multipled by social preference in  inequality with network threshold ---- if bleow threshodl engae in linear bid.  (<=)
-                     [
-                        ifelse ((network_threshold - network_quality ) <= 0) ; really assess network pressure, once pressure out wiegh intial threhold quality has to be bigger than threshold
-                          [ifelse any? in-link-neighbors
-                               [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2)) ] ; change by mutliplying
-                               [set unique_valuation ((((valuation + unique_valuation)/ 2)))]]
-                          [set unique_valuation ("no bid")]
-                     ]
-
-                    [ ifelse any? in-link-neighbors
-                         [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2))] ;network quality is consider through linke neighbor valuation now better off or worse off neighbori nfleince agent decison making
-                         [set unique_valuation valuation];thiscreate a valuation without network impacgts
-                    ]
-
+to nested_resident_valuation
+   ask houses
+  [
+    if network_quality = 0 [stop]
+    set_monetary_valuation
+    set monetary_quality (monetary_valuation / max [monetary_valuation] of houses)
+    set_social_valuation ;socialprefrence intergrated into "set_social_valuation" function
+    if max [soc_valuation] of houses > 0 [set soc_quality (soc_valuation / max [soc_valuation] of houses)]
+    set valuation  (((1 - social_preference) * monetary_quality) + (social_preference * soc_quality))
+    ifelse social_preference > 0
+    [
+      ifelse ((network_threshold - network_quality ) <= 0)
+      [
+        ifelse any? in-link-neighbors
+                               [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2))]
+                               [set unique_valuation ((((valuation + unique_valuation)/ 2)))]
+      ]
+      [set unique_valuation ("no bid")]
+    ]
+    [
+      ifelse any? in-link-neighbors
+      [set unique_valuation ((((valuation + (mean[valuation] of link-neighbors)))/ 2))]
+      [set unique_valuation valuation]
+    ]
   ]
-  ;print valuation
 end
 
 to strategy_select
-  if resident_strategy = "Linear"
-        [linear_res_valuation ]; resident assess housing value
-  if resident_strategy = "Nested"
-        [nested_resident_valuation ]
+  if resident_strategy = "Linear" [linear_res_valuation]
+  if resident_strategy = "Nested" [nested_resident_valuation]
 end
 
+;######################## Bidding Cycle ##################
 
-;################################################## NOrfolk Operations#########################################################################
-
-to norfolk_bid ; bid function is inside of search function
-
-  set mortgage-buyout-ratio (non-normalized-norfolk-offer / monetary_valuation);x)] ; #mj
+to buyer_bid ; bid function is inside of search function
+  set mortgage-buyout-ratio (non-normalized-buyer-offer / monetary_valuation)
   buyout-output
 
-  ifelse  unique_valuation = "no bid"
-          [ask patch-here [set bid_failures bid_failures + 1 print "Failed bid" print bid_failures]]
-  [ifelse norfolk_offer > unique_valuation ; ife else statemen that if residnet vlaaution higher thatn norfolk add to bid failure
+  ifelse unique_valuation = "no bid"
+  [ask patch-here [set bid_failures bid_failures + 1 print "Failed bid" print bid_failures]]
+  [
+    ifelse buyer_offer > unique_valuation
     [
       set success-flag 1
       set success-total success-total + 1
-
       ask patch-here[
-        set mortgage-buyout-ratio (non-normalized-norfolk-offer /(first [monetary_valuation] of houses-here));x)]
+        set mortgage-buyout-ratio (non-normalized-buyer-offer /(first [monetary_valuation] of houses-here))
         buyout-output
-        set norfolk_owned  True
-        ask neighbors[if norfolk_owned != true and impact_effects = true [secondary_impacts]] ;valuation change as oppose mortgage--- stretch work is to add specualtive aspect to  work.  ask agent to behave in specualtive fashion.
-                                                                    ; update montery-valuaiton of nieghborhood patches in seconday impacts
+        set buyer_owned  True
+        ask neighbors[if buyer_owned != true and impact_effects = true [secondary_impacts]] ; negative impacts on adjacent patches
         set pcolor blue
-        ;if impact_effects = true []
         ask houses-here [die]
       ]
       set bid_failures 0
@@ -379,59 +323,53 @@ to norfolk_bid ; bid function is inside of search function
     ]
   ]
 
-
-  print "Norfolk bid occured"
-  print "Norfolk offer"
-  print norfolk_offer
   set-current-plot "Purchase Price to Household Valuation Ratio" ; the Mortgage* here refers to the monetary valuation, as that value is a composite variable that is much more robust adn refelctive on our intent to show purchasing value to  house valuation
   plot mortgage-buyout-ratio
 end
 
-
-to norfolk_valuation ; offer_adjustment * bid failure can be changed to be a percentage interaction of specfic houses offer
-  set norfolk_offer (((mortgage * (.01 * offer_adjustment ) * bid_failures) + mean[mortgage] of patches with [norfolk_owned != True and empty != True] )/ max [mortgage] of patches) ; cleaned up aspects and normali
-  set non-normalized-norfolk-offer (offer_adjustment * bid_failures) + mean[mortgage] of patches with [norfolk_owned != True and empty != True]
-  print "norfolk offer"
-  print norfolk_offer
+to buyer_valuation ; offer_adjustment * bid failure can be changed to be a percentage interaction of specfic houses offer in future versions
+  set buyer_offer (((mortgage * (.01 * offer_adjustment ) * bid_failures) + mean[mortgage] of patches with [buyer_owned != True and empty != True] )/ max [mortgage] of patches)
+  set non-normalized-buyer-offer (offer_adjustment * bid_failures) + mean[mortgage] of patches with [buyer_owned != True and empty != True]
 end
 
-
-to norfolk_bid_search
-  if (any? houses = true) [
-    repeat blockSize [
-      if any? houses with [flagged = 0] [ask one-of houses with [ flagged = 0 ] ; create block list of 'flagged' houses
-      [ set flagged 1 ]; house selection will be random, I don't think that proximity is going to be a determinign factor for block list
+to buyer_bid_search
+  if (any? houses = true)
+  [
+    repeat blockSize ; creates list of households to make offers to
+    [
+      if any? houses with [flagged = 0] [ask one-of houses with [ flagged = 0 ]
+        [set flagged 1]
       ]
     ]
-  ] ; this create an accountingg of instacnes of events---outside of the ticks
+  ]
 
   set blockList houses with [flagged = 1]
 
   ask blockList [
-    norfolk_valuation
-    norfolk_bid
-  ] ; this is asking things concurrently
+    buyer_valuation
+    buyer_bid
+  ] ; this is asking households concurrently
 end
 
 to secondary_impacts
-  ask neighbors[if norfolk_owned = true [set mortgage mortgage - (mortgage * (.01 * negative_impact))]] ; changed so valaution of nieghbors-agent valution is decreased.
-  ; change of variable name: set monetary_quality  monetary_quality * (1 - negative_impact) , now negative impact now percentage between 0-> 5%
-  ; update monteary valuation 8 nieghbors that are occupied
+  ask neighbors[if buyer_owned = true [set mortgage mortgage - (mortgage * (.01 * negative_impact))]]
 end
 
 to define_hold_out_ratio
-  let x  bid_refused_total / count houses with [ bid_failures > 0]
-
+  if (count houses with [bid_failures > 0] > 0)
+  [
+    set hold_out_ratio bid_refused_total / count houses with [ bid_failures > 0]
+  ]
 end
 
-;##################### Graph Plotting ##################################
+;##################### Plotting ##################################
 to do-plotting
-  set-current-plot "Mortgage Distribution" ; is there a way to make diffent buckets groups bucket 1 1 and 221100, 221101 and 252149, 252150+  , SD = 31,048
+  set-current-plot "Mortgage Distribution"
   let minimum_x min [mortgage] of patches with [mortgage > 1]
   set-plot-x-range minimum_x (max [mortgage] of patches)
   set-plot-y-range 0 count patches with [mortgage > 1]
-  set-histogram-num-bars 5
-  ; ###
+  set-histogram-num-bars 10
+
   set-current-plot "Network Distribution"
   set-plot-x-range 0 max [count link-neighbors] of houses
   set-plot-y-range 0 count houses
@@ -439,38 +377,46 @@ to do-plotting
 
   set-current-plot "Hold Out Ratio"
   set-plot-y-range 0 7
-  ; ###
 end
 
 
-;################## file output#################################
+;################## File Output #################################
 
 to check_file
   let date-time  date-and-time
   set date-time remove ":" date-time
   show date-time
-   ifelse(file-exists? (word "simulation_output.txt" ))
-           [ set counter  counter + 1
-            file-open (word "simulation_output"date-time counter".txt")
-             set active_file (word "simulation_output" date-time counter".txt") ]
-           [ file-open "simulation_output.txt"
-             set active_file "simulation_output.txt"                 ]
+  ifelse(file-exists? (word "simulation_output.txt" ))
+  [
+              set counter  counter + 1
+              file-open (word "simulation_output"date-time counter".txt")
+              set active_file (word "simulation_output" date-time counter".txt")
+  ]
+  [
+    file-open "simulation_output.txt"
+    set active_file "simulation_output.txt"
+  ]
 
 end
 
 
 to write_meta_file
   ifelse(file-exists? (word "meta_data.csv"))
-           [ set m_counter  m_counter + 1
-              file-open (word "meta_data"active_file".csv")
-               set meta_file (word "meta_data"active_file".csv")     ]
-            [ file-open(word"meta_data.csv")
-             set meta_file (word "meta_data.csv")                      ]
+  [
+    set m_counter  m_counter + 1
+    file-open (word "meta_data"active_file".csv")
+    set meta_file (word "meta_data"active_file".csv")
+  ]
+  [
+    file-open(word"meta_data.csv")
+    set meta_file (word "meta_data.csv")
+  ]
 
- file-open (word meta_file)
-  ;file-print ("t icks mortgage-buyout-ratio non-normalized-norfolk-offer success-flag success-total")
+  file-open (word meta_file)
+
   file-write csv:to-row
-  (list
+  (
+    list
     "blocksize"int (blocksize)
     "resident_strategy"resident_strategy
     "social_affinity"social_affinity
@@ -486,90 +432,113 @@ to write_meta_file
     "mean_mtg" mean_mortgage
     "std_dev" mort_stnd_dev
     )
-  ; updated 10/28 to add more values to the meta file for tracking and differtiation
 
   file-close
 end
-; above here is stuff we want we ahve to do the let x be various values
 
 to  write_header
   file-open(word active_file)
    file-write csv:to-row
-   (list
-     "ticks" "mortgage-buyout-ratio" "soc_quality" "monetary_valuation" "non-normalized-norfolk-offer" "success-flag""success-total" "houses" "Houses_network_4_plus" "Houses_network_3" "Houses_network_2" "Total_Links" "hold_out_ratio" "initial_val"
-     )
+   (
+    list
+    "ticks"
+    "mortgage-buyout-ratio"
+    "soc_quality"
+    "monetary_valuation"
+    "non-normalized-buyer-offer"
+    "success-flag"
+    "success-total"
+    "houses"
+    "Houses_network_4_plus"
+    "Houses_network_3"
+    "Houses_network_2"
+    "Total_Links"
+    "hold_out_ratio"
+    "initial_val"
+  )
 end
 
+to buyout-output
+  if simulation-output = true
+  [
+    file-open (word active_file)
 
-
-to buyout-output ; appends to the mortgage buyout file to track the ratio over time (by tick) and when bids were successful
- file-open (word active_file)
- ; let x  insert-item 0 ["tick"]  ticks
- ; file-write behaviorspace-run-number
-  ask houses-here [
-                    let y soc_quality
-                    let m monetary_valuation
-                    let h initial_valuation  ;EJ
-                    let neiih "hold"
-                    let lih "hold"
-    ask neighbors4[ifelse (norfolk_owned = true or empty = true) ;  fix nieghbor call to asked houses to ask patches  #feb_1
-                                                     [set neiih true ] ; neighbor isolated houses
-                        [set neiih false]]
-                    ifelse  count link-neighbors = 0
-                        [set lih true ] ; link isolated houses
-                        [set lih false]
-    if (count houses with [bid_failures > 0] > 0)
-    [set hold_out_ratio  bid_refused_total / count houses with [ bid_failures > 0]  ; we need to do networkes and isolated modifications to this later
-   ]
-      ;let net_ho  bid-refusal of houses with links / count houses [with bid_failure > 0 and links > 0]
-   file-write csv:to-row
-   (list
-    int ticks
-    mortgage-buyout-ratio
-    int y
-    int m
-    int non-normalized-norfolk-offer
-    int success-flag
-    int success-total
-    int count houses
-    int count houses with[count my-out-links >= 4]
-    int count houses with[count my-out-links = 3]
-    int count houses with [count my-out-links = 2]
-    int count links
-    hold_out_ratio
-    int h ; EJ
-    neiih
-    lih
-    mean_mortgage ; EJ
-    mort_stnd_dev ; EJ
-     )
-                   ]
-  ;file-write csv:to-row (sentence ticks mortgage-buyout-ratio m non-normalized-norfolk-offer success-flag success-total y count houses  count houses with[count my-out-links >= 2] ) ]
- ;
-  ; for meta data for success flag 1 or 0 will be true of false
-
-  file-close-all
+    ask houses-here [
+      let y soc_quality
+      let m monetary_valuation
+      let h initial_valuation
+      let neiih "hold"
+      let lih "hold"
+      ask neighbors4
+      [
+        ifelse (buyer_owned = true or empty = true)
+        [set neiih true] ; neighbor isolated houses
+        [set neiih false]
+      ]
+      ifelse  count link-neighbors = 0
+      [set lih true ] ; link isolated houses
+      [set lih false]
+      if (count houses with [bid_failures > 0] > 0)
+      [
+        set hold_out_ratio  bid_refused_total / count houses with [ bid_failures > 0]
+      ]
+      file-write csv:to-row
+      (
+        list
+        int ticks
+        mortgage-buyout-ratio
+        int y
+        int m
+        int non-normalized-buyer-offer
+        int success-flag
+        int success-total
+        int count houses
+        int count houses with[count my-out-links >= 4]
+        int count houses with[count my-out-links = 3]
+        int count houses with [count my-out-links = 2]
+        int count links
+        hold_out_ratio
+        int h
+        neiih
+        lih
+        mean_mortgage
+        mort_stnd_dev
+      )
+    ]
+    file-close-all
+  ]
 end
 
-; FUNCTION CALL  OPERATIONS MAIN CALL LIST ############################################################################################
+; ############## Main #####################
+
 to setup
   clear-all
   reset-ticks
   set-default-shape houses "house"
-  if simulation-output = true[
+  if simulation-output = true
+  [
     check_file
     write_meta_file
     write_header
   ]
+
   ;#Patch Data Import#
   if distribution = "Real"
-      [set_data_import  setup_patches patch_effects]
+  [
+    real_data_import
+    real_dist_setup
+    patch_effects
+  ]
   if distribution = "Simulated"
-      [gamma_dist_generation gamma_patch_set_up patch_effects]
+  [
+    gamma_dist_generation
+    gamma_patch_set_up
+    patch_effects
+  ]
 
   let std-dev standard-deviation [mortgage] of patches
   let avg mean [mortgage] of patches
-  set high_value count patches with[mortgage >= avg + (std-dev * 2)]
+  set high_value count patches with [mortgage >= avg + (std-dev * 2)]
   set med_value count patches with [mortgage <= (avg + std-dev) and mortgage >= (avg - std-dev)]
   set low_value count patches with [mortgage <= avg - (std-dev * 2)]
 
@@ -581,17 +550,13 @@ to setup
   reset-ticks
 end
 
-
-
 to go
   if (any? houses = false) [stop]
- ; social_network_assessment ; network assesmemnt + visualizaiton update
-  strategy_select  ; resident willingness to pay calculation strategies
-  norfolk_bid_search ; norfolk search  strategies and bidding
-   ask houses [
-    set flagged 0
-  ]
-   colorize_houses
+  strategy_select
+  buyer_bid_search
+  define_hold_out_ratio
+  ask houses [set flagged 0]
+  colorize_houses
   tick
 end
 @#$#@#$#@
@@ -899,7 +864,7 @@ PLOT
 463
 683
 591
-Norfolk Offer
+Buyer Offer
 NIL
 NIL
 0.0
@@ -910,15 +875,15 @@ false
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot non-normalized-norfolk-offer"
+"default" 1.0 0 -16777216 true "" "plot non-normalized-buyer-offer"
 
 MONITOR
 249
 545
-409
+415
 590
 NIL
-non-normalized-norfolk-offer
+non-normalized-buyer-offer
 17
 1
 11
