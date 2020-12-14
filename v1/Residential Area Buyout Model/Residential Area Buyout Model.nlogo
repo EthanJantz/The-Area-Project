@@ -95,7 +95,6 @@ to gamma_dist_generation
   loop [
     ifelse (count patches with [mortgage = 0] > instance_count + 100)
     [
-      ;print "gamma list creation"
       set gamma_list lput (random-gamma ((mean_mortgage ^ 2 / mort_stnd_dev ^ 2 )) (1 / ((mort_stnd_dev ^ 2) / mean_mortgage ))) gamma_list
       set instance_count instance_count + 1
     ]
@@ -300,7 +299,12 @@ to buyer_bid ; bid function is inside of search function
   buyout-output
 
   ifelse unique_valuation = "no bid"
-  [ask patch-here [set bid_failures bid_failures + 1 print "Failed bid" print bid_failures]]
+  [ask patch-here
+    [
+      set bid_failures bid_failures + 1
+      ;print "Failed bid" print bid_failures
+    ]
+  ]
   [
     ifelse buyer_offer > unique_valuation
     [
@@ -318,7 +322,8 @@ to buyer_bid ; bid function is inside of search function
     ]
     [
       set bid_refused_total bid_refused_total + 1
-      set bid_failures bid_failures + 1 print "Failed bid: " print bid_failures
+      set bid_failures bid_failures + 1
+      ;print "Failed bid: " print bid_failures
       set success-flag 0
     ]
   ]
