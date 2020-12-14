@@ -1036,6 +1036,8 @@ Wilensky, U. (2005). NetLogo Preferential Attachment model. http://ccl.northwest
 
 This model was developed by Ethan Jantz and Michael Johnson with direction from Moira Zellner at the Urban Digital Visualization Lab in Chicago, IL. 
 
+Please use the following citation when referring to this model: 
+
 Jantz and Johnson (2020) Residential Area Buyout Model. Urban Digital Visualization Lab, University of Illinois - Chicago, Chicago, IL
 @#$#@#$#@
 default
