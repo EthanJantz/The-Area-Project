@@ -173,4 +173,16 @@ plot_network_avg <- function(data, title) {
 plot_network_avg(base_analysis, "Area")
 plot_network_avg(aff_analysis, "Affluent Area")
 plot_network_avg(asym_analysis, "Asymmetric Market")
+
+plot_buyout_roc <- function(data, title) {
+    ggplot(data) +
+    geom_line(aes(x = Ticks, y = buyout_roc)) +
+    labs(x = "Bidding Cycles Occured", y = "Mortgage Buyout Percent Change",
+         title = paste(title, "Buyout Percent Change"), 
+         subtitle = "Percent Change in Mortgage Buyout Ratio for Each Bidding Cycle")  
+}
+
+plot_buyout_roc(base_analysis, "Area")
+plot_buyout_roc(aff_analysis, "Affluent Area")
+plot_buyout_roc(asym_analysis, "Asymmetric Market")
 ```
