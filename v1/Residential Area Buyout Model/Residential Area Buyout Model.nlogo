@@ -98,7 +98,11 @@ to gamma_dist_generation
       set gamma_list lput (random-gamma ((mean_mortgage ^ 2 / mort_stnd_dev ^ 2 )) (1 / ((mort_stnd_dev ^ 2) / mean_mortgage ))) gamma_list
       set instance_count instance_count + 1
     ]
-    [print "Gamma distribution simulation complete" stop]
+    [
+      print "Gamma distribution simulation complete"
+      ;print gamma_list
+      stop
+    ]
   ]
 end
 

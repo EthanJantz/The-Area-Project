@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(RSQLite)
+library(patchwork)
 
 sqlite.driver <- dbDriver("SQLite")
 
@@ -134,4 +135,42 @@ asym_analysis <- asym_table %>%
     buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
   )
 # write_csv(asym_analysis, "asymSim.csv")
+```
+
+```{r analysis}
+plot_holdout_avg <- function(data, title) {
+  ggplot(data) +
+    geom_line(aes(x = Ticks, y = holdout_ratio_avg)) +
+    labs(x = "Bidding Cycles Occured", y = "Holdout Ratio",
+         title = paste(title, "Holdout Ratio"), 
+         subtitle = "Average Holdout Ratio for Each Bidding Cycle")
+}
+
+plot_holdout_avg(base_analysis, "Area")
+plot_holdout_avg(aff_analysis, "Affluent Area")
+plot_holdout_avg(asym_analysis, "Asymmetric Market")
+
+plot_buyout_avg <- function(data, title){
+  ggplot(data) +
+    geom_line(aes(x = Ticks, y = buyout_ratio_avg)) + 
+    labs(x = "Bidding Cycles Occured", y = "Mortgage Buyout Ratio",
+         title = paste(title, "Mortgage Buyout Ratio"), 
+         subtitle = "Average Mortgage Buyout Ratio for Each Bidding Cycle")    
+}
+
+plot_buyout_avg(base_analysis, "Area")
+plot_buyout_avg(aff_analysis, "Affluent Area")
+plot_buyout_avg(asym_analysis, "Asymmetric Market")
+
+plot_network_avg <- function(data, title) {
+  ggplot(data) +
+    geom_line(aes(x = Ticks, y = links_avg)) +
+    labs(x = "Bidding Cycles Occured", y = "Social Network Links",
+         title = paste(title, "Social Network Change"), 
+         subtitle = "Average Number of Network Links for Each Bidding Cycle")      
+}
+
+plot_network_avg(base_analysis, "Area")
+plot_network_avg(aff_analysis, "Affluent Area")
+plot_network_avg(asym_analysis, "Asymmetric Market")
 ```
