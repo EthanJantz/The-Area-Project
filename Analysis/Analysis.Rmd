@@ -58,7 +58,7 @@ base_analysis <- base_table %>%
   ) %>%
   mutate(
     pct_houses_bought = houses_avg_endoftick / houses_at_setup,
-    buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
+    buyout_roc = (lead(buyout_ratio_avg) / buyout_ratio_avg) - 1
   )
 
 # write_csv(base_analysis, "baseSim.csv")
@@ -95,7 +95,7 @@ aff_analysis <- aff_table %>%
   ) %>%
   mutate(
     pct_houses_bought = houses_avg_endoftick / houses_at_setup,
-    buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
+    buyout_roc = (lead(buyout_ratio_avg) / buyout_ratio_avg) - 1
   )
 
 # write_csv(aff_analysis, "affSim.csv")
@@ -132,7 +132,7 @@ asym_analysis <- asym_table %>%
   ) %>%
   mutate(
     pct_houses_bought = houses_avg_endoftick / houses_at_setup,
-    buyout_roc = lead(buyout_ratio_avg) / buyout_ratio_avg
+    buyout_roc = (lead(buyout_ratio_avg) / buyout_ratio_avg) - 1
   )
 # write_csv(asym_analysis, "asymSim.csv")
 ```
