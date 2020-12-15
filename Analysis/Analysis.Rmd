@@ -13,7 +13,7 @@ library(RSQLite)
 sqlite.driver <- dbDriver("SQLite")
 
 base <- "Data/area_base_mydatabase.db"
-asym <- "Data/asymeticalmydatabase.db"
+asym <- "Data/asymetricalmydatabase.db"
 aff <- "Data/area_affluentmydatabase.db"
 
 db_base <- dbConnect(sqlite.driver,
