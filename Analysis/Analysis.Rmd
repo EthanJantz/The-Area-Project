@@ -10,12 +10,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(RSQLite)
 library(patchwork)
+library(gtsummary)
 
 sqlite.driver <- dbDriver("SQLite")
 
-base <- "Data/area_base_mydatabase.db"
-asym <- "Data/asymetricalmydatabase.db"
-aff <- "Data/area_affluentmydatabase.db"
+base <- "15_run_Data/Areamydatabase.db"
+asym <- "15_run_Data/Asymetricalmydatabase.db"
+aff <- "15_run_Data/Affluentmydatabase.db"
 
 db_base <- dbConnect(sqlite.driver,
                      dbname = base)
@@ -142,47 +143,73 @@ plot_holdout_avg <- function(data, title) {
   ggplot(data) +
     geom_line(aes(x = Ticks, y = holdout_ratio_avg)) +
     labs(x = "Bidding Cycles Occured", y = "Holdout Ratio",
-         title = paste(title, "Holdout Ratio"), 
-         subtitle = "Average Holdout Ratio for Each Bidding Cycle")
+         title = paste(title, "Scenario"),
+         subtitle = "Average Holdout Ratio")
 }
-
-plot_holdout_avg(base_analysis, "Area")
-plot_holdout_avg(aff_analysis, "Affluent Area")
-plot_holdout_avg(asym_analysis, "Asymmetric Market")
 
 plot_buyout_avg <- function(data, title){
   ggplot(data) +
-    geom_line(aes(x = Ticks, y = buyout_ratio_avg)) + 
+    geom_line(aes(x = Ticks, y = buyout_ratio_avg)) +
+    scale_y_continuous(labels = scales::percent) +
     labs(x = "Bidding Cycles Occured", y = "Mortgage Buyout Ratio",
-         title = paste(title, "Mortgage Buyout Ratio"), 
-         subtitle = "Average Mortgage Buyout Ratio for Each Bidding Cycle")    
+         subtitle = "Average Mortgage Buyout Ratio")
 }
-
-plot_buyout_avg(base_analysis, "Area")
-plot_buyout_avg(aff_analysis, "Affluent Area")
-plot_buyout_avg(asym_analysis, "Asymmetric Market")
 
 plot_network_avg <- function(data, title) {
   ggplot(data) +
     geom_line(aes(x = Ticks, y = links_avg)) +
     labs(x = "Bidding Cycles Occured", y = "Social Network Links",
-         title = paste(title, "Social Network Change"), 
-         subtitle = "Average Number of Network Links for Each Bidding Cycle")      
+         subtitle = "Average Number of Network Links")
 }
-
-plot_network_avg(base_analysis, "Area")
-plot_network_avg(aff_analysis, "Affluent Area")
-plot_network_avg(asym_analysis, "Asymmetric Market")
 
 plot_buyout_roc <- function(data, title) {
     ggplot(data) +
     geom_line(aes(x = Ticks, y = buyout_roc)) +
-    labs(x = "Bidding Cycles Occured", y = "Mortgage Buyout Percent Change",
-         title = paste(title, "Buyout Percent Change"), 
-         subtitle = "Percent Change in Mortgage Buyout Ratio for Each Bidding Cycle")  
+    scale_y_continuous(labels = scales::percent) +
+    labs(x = "Bidding Cycles Occured", y = "Percent Change",
+         subtitle = "Percent Change in Mortgage Buyout Ratio")
 }
 
-plot_buyout_roc(base_analysis, "Area")
-plot_buyout_roc(aff_analysis, "Affluent Area")
-plot_buyout_roc(asym_analysis, "Asymmetric Market")
+(plot_holdout_avg(base_analysis, "Area") + plot_buyout_avg(base_analysis, "Area") + plot_network_avg(base_analysis, "Area") +plot_buyout_roc(base_analysis, "Area"))
+
+(plot_holdout_avg(aff_analysis, "Affluent Area") + plot_buyout_avg(aff_analysis, "Affluent Area") + plot_network_avg(aff_analysis, "Affluent Area") + plot_buyout_roc(aff_analysis, "Affluent Area"))
+
+(plot_holdout_avg(asym_analysis, "Asymmetric Market") + plot_buyout_avg(asym_analysis, "Asymmetric Market") + plot_network_avg(asym_analysis, "Asymmetric Market") + plot_buyout_roc(asym_analysis, "Asymmetric Market"))
+```
+
+```{r tables}
+sum_table <- function(data, title) {
+  data %>%
+  select(
+    "Max Bidding Cycles" = Ticks,
+    "Max Holdout Ratio" = holdout_ratio_avg,
+    "Average Mortgage Buyout Ratio" = buyout_ratio_avg,
+    "Pct Change in Buyout Ratio (range)" = buyout_roc
+  ) %>%
+  mutate(
+    `Pct Change in Buyout Ratio (range)` = `Pct Change in Buyout Ratio (range)` * 100
+  ) %>%
+  tbl_summary(
+    statistic = list(
+      `Max Bidding Cycles` ~ "{max}",
+      `Max Holdout Ratio` ~ "{max}",
+      `Average Mortgage Buyout Ratio` ~ "{mean} ({min} - {max})",
+      `Pct Change in Buyout Ratio (range)` ~ "{min} - {max}"
+    ),
+    missing = "no"
+  ) %>%
+  modify_header(
+    update = list(
+      label ~ paste(title, "Scenario"),
+      stat_0 ~ ""
+      )
+  ) %>%
+  modify_footnote(
+    everything() ~ NA
+  )
+} 
+
+gt::gtsave(as_gt(sum_table(base_analysis, "Area")), "Area Scenario Table.png")
+gt::gtsave(as_gt(sum_table(aff_analysis, "Affluent Area")), "Affluent Area Table.png")
+gt::gtsave(as_gt(sum_table(asym_analysis, "Asymmetrical Market")), "Asymmetrical Market Table.png")
 ```
